@@ -1,3 +1,4 @@
+#© 2024 Daniel DeMoney. All rights reserved.
 '''
 TO DO: 
 *CRUD methods for company CHECK

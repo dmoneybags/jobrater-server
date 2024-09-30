@@ -1,3 +1,4 @@
+#© 2024 Daniel DeMoney. All rights reserved.
 '''
 UNUSED FILE>>>>MOVED TO DATABASE SERVER
 

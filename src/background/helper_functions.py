@@ -1,3 +1,4 @@
+#© 2024 Daniel DeMoney. All rights reserved.
 '''
 Simple class of helper functions.
 

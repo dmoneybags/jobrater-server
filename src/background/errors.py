@@ -1,3 +1,4 @@
+#© 2024 Daniel DeMoney. All rights reserved.
 class DuplicateUserJob(Exception):
     """when a user tries to add the same job twice"""
     

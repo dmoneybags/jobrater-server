@@ -1,3 +1,4 @@
+#© 2024 Daniel DeMoney. All rights reserved.
 from typing import Dict
 from uuid import UUID
 from database_functions import DatabaseFunctions, get_connection

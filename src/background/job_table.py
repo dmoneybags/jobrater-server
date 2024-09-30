@@ -1,3 +1,4 @@
+#© 2024 Daniel DeMoney. All rights reserved.
 from database_functions import DatabaseFunctions, get_connection
 from collections import OrderedDict
 import json

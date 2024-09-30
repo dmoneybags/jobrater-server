@@ -1,3 +1,4 @@
+#© 2024 Daniel DeMoney. All rights reserved.
 from decimal import Decimal
 from enum import Enum, IntEnum
 from datetime import datetime

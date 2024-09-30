@@ -1,3 +1,4 @@
+#© 2024 Daniel DeMoney. All rights reserved.
 import aiohttp
 import asyncio
 import json

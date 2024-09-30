@@ -1,3 +1,4 @@
+#© 2024 Daniel DeMoney. All rights reserved.
 import os
 import datetime
 from flask import Flask, request, jsonify, abort, Response
