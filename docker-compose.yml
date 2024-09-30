@@ -1,0 +1,10 @@
+services:
+  jobrater:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Specify your Dockerfile
+    image: jobrater-main
+    env_file: .env  # Reference the .env file
+    shm_size: '2g'
+    ports:
+      - "443:5001"
