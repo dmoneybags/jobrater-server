@@ -1,4 +1,4 @@
-#© 2024 Daniel DeMoney. All rights reserved.
+#(c) 2024 Daniel DeMoney. All rights reserved.
 from datetime import datetime
 from typing import Dict
 from mysql.connector.types import RowItemType

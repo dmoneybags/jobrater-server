@@ -1,3 +1,4 @@
+#(c) 2024 Daniel DeMoney. All rights reserved.
 import re
 import numpy as np
 import torch

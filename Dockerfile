@@ -1,4 +1,4 @@
-#© 2024 Daniel DeMoney. All rights reserved.
+#(c) 2024 Daniel DeMoney. All rights reserved.
 
 # Use a lightweight Python image as the base
 FROM python:3.12-slim

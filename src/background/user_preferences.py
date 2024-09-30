@@ -1,4 +1,4 @@
-#© 2024 Daniel DeMoney. All rights reserved.
+#(c) 2024 Daniel DeMoney. All rights reserved.
 from uuid import UUID
 from decimal import Decimal
 from job import PaymentFrequency, Job

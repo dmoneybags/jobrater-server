@@ -1,4 +1,4 @@
-#© 2024 Daniel DeMoney. All rights reserved.
+#(c) 2024 Daniel DeMoney. All rights reserved.
 import json
 from pymongo import MongoClient
 from pymongo.results import InsertOneResult, InsertManyResult
