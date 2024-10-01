@@ -7,6 +7,7 @@ from mysql.connector.connection_cext import CMySQLConnection
 from mysql.connector.errors import IntegrityError
 from user_preferences import UserPreferences
 from job import Job
+import logging
 
 class UserPreferencesTable:
     '''
@@ -51,7 +52,7 @@ class UserPreferencesTable:
         the query str with %s for injection
     '''
     def __get_update_user_preferences_query(preferences_update_data : Dict) -> str:
-        print(preferences_update_data)
+        logging.info(preferences_update_data)
         cols : list[str] = list(preferences_update_data.keys())
         col_str : str = "=%s, ".join(cols)
         #add on last replacement str
@@ -69,7 +70,7 @@ class UserPreferencesTable:
         0 if no errors occured
     '''
     def add_user_preferences(preferences: UserPreferences) -> int:
-        print("ADDING USER PREFERENCES WITH USER ID " + str(preferences.user_id))
+        logging.info("ADDING USER PREFERENCES WITH USER ID " + str(preferences.user_id))
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
                 query : str = UserPreferencesTable.__get_add_user_preferences_query()
@@ -86,9 +87,9 @@ class UserPreferencesTable:
                                         preferences.auto_compare_resume_on_new_job_loaded, 
                                         preferences.save_every_job_by_default))
                 except IntegrityError as e:
-                    print("USER PREFERENCES ALREADY IN DB")
+                    logging.error("USER PREFERENCES ALREADY IN DB")
                     raise e
-                print("USER PREFERENCES SUCCESSFULLY ADDED")
+                logging.info("USER PREFERENCES SUCCESSFULLY ADDED")
                 conn.commit()
         return 0
     def read_user_preferences(user_id: UUID | str):
@@ -121,8 +122,8 @@ class UserPreferencesTable:
                 params : list = list(preferences_json.values())
                 params.append(str(user_id))
                 #Execute the query
-                print(update_str)
-                print(params)
+                logging.debug(update_str)
+                logging.debug(params)
                 cursor.execute(update_str, params)
                 conn.commit()
         #return success

@@ -11,6 +11,7 @@ from user_specific_job_data import UserSpecificJobData
 from typing import Dict
 from mysql.connector.types import RowType, RowItemType
 import hashlib
+import logging
 
 
 class UserJobTable:
@@ -114,7 +115,7 @@ class UserJobTable:
     '''
     def add_user_job(user_id_uuid : UUID | str, job_id : str) -> int:
         user_id : str = str(user_id_uuid)
-        print("ADDING USER JOB WITH USER ID " + user_id + " AND JOB ID OF " + job_id)
+        logging.info("ADDING USER JOB WITH USER ID " + user_id + " AND JOB ID OF " + job_id)
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
                 query : str = UserJobTable.__get_add_user_job_query()
@@ -125,9 +126,9 @@ class UserJobTable:
                 try:
                     cursor.execute(query, (user_job_id, user_id, job_id))
                 except IntegrityError as e:
-                    print("USER JOB ALREADY IN DB")
+                    logging.error("USER JOB ALREADY IN DB")
                     raise e
-                print("USER JOB SUCCESSFULLY ADDED")
+                logging.info("USER JOB SUCCESSFULLY ADDED")
                 conn.commit()
         return 0
     '''
@@ -152,10 +153,10 @@ class UserJobTable:
                 affected_rows = cursor.rowcount
 
                 if affected_rows == 0:
-                    print("No user job found with the specified ID.")
-                    print(f"user_job_id: {user_job_id}, user_id: {user_id}, job_id: {job_id}")
+                    logging.info("No user job found with the specified ID.")
+                    logging.info(f"user_job_id: {user_job_id}, user_id: {user_id}, job_id: {job_id}")
                 else:
-                    print("USER JOB SUCCESSFULLY DELETED")
+                    logging.info("USER JOB SUCCESSFULLY DELETED")
                 conn.commit()
         return 0
     '''

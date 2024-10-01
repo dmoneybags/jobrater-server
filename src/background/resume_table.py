@@ -7,6 +7,7 @@ from mysql.connector.cursor import MySQLCursor
 from mysql.connector.connection_cext import CMySQLConnection
 from mysql.connector.types import RowType, RowItemType
 import datetime
+import logging
 
 class ResumeTable:
     '''
@@ -63,7 +64,7 @@ class ResumeTable:
     '''
     def add_resume(user_id: UUID | str, resume: Resume) -> int:
         user_id : str = str(user_id)
-        print("ADDING RESUME WITH USER ID " + user_id + " FILENAME OF " + resume.file_name)
+        logging.info("ADDING RESUME WITH USER ID " + user_id + " FILENAME OF " + resume.file_name)
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
                 query : str = ResumeTable.__get_add_resume_query()
@@ -80,19 +81,19 @@ class ResumeTable:
                 try:
                     cursor.execute(query, resume_values)
                 except Exception as e:
-                    print("RECIEVED ERROR WHEN ATTEMPTING TO ADD RESUME")
-                    print(e)
+                    logging.error("RECIEVED ERROR WHEN ATTEMPTING TO ADD RESUME")
+                    logging.error(e)
                     cursor.close()
                     conn.close()
                     raise e
-                print("RESUME SUCCESSFULLY ADDED")
+                logging.info("RESUME SUCCESSFULLY ADDED")
                 conn.commit()
                 resume.upload_date = datetime.datetime.utcnow()
                 resume.id = cursor.lastrowid
-                print("Resume uploaded at ")
-                print(resume.upload_date) 
+                logging.info("Resume uploaded at ")
+                logging.info(resume.upload_date) 
                 resume_json = resume.to_json()
-                print(resume_json["uploadDate"])
+                logging.info(resume_json["uploadDate"])
         return resume_json
     '''
     delete_resume
@@ -106,7 +107,7 @@ class ResumeTable:
             with conn.cursor(dictionary=True) as cursor:
                 query : str = ResumeTable.__get_delete_resume_query()
                 cursor.execute(query, (resume_id,))
-                print("RESUME SUCCESSFULLY DELETED")
+                logging.info("RESUME SUCCESSFULLY DELETED")
                 conn.commit()
         return 0
     '''

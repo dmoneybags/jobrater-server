@@ -45,11 +45,12 @@ import json
 import os
 import uuid
 from decimal import Decimal
+import logging
 
 class DatabaseFunctions:
     IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
-    print("VALUE FOR ISPRODUCTION:")
-    print(IS_PRODUCTION)
+    logging.info("VALUE FOR ISPRODUCTION:")
+    logging.info(IS_PRODUCTION)
     # Set database parameters based on the environment
     if IS_PRODUCTION:
         HOST = "ip-172-31-11-79.us-west-1.compute.internal"
@@ -87,7 +88,7 @@ class DatabaseFunctions:
                     cursor.close()
                 except mysql.connector.Error as query_err:
                     # If the query fails, close and try to reconnect
-                    print(f"Error with validation query: {query_err}")
+                    logging.error(f"Error with validation query: {query_err}")
                     conn.close()  # Close invalid connection
                     conn = DatabaseFunctions.pool.get_connection()  # Get a new connection
             else:
@@ -96,8 +97,8 @@ class DatabaseFunctions:
                 conn = DatabaseFunctions.pool.get_connection()
                 
         except mysql.connector.errors.OperationalError as e:
-            print("Got operational error getting connection of:")
-            print(e)
+            logging.error("Got operational error getting connection of:")
+            logging.error(e)
             # Handle case where reconnection is needed
             if conn:
                 conn.reconnect(attempts=3, delay=5)  # Try to reconnect manually
@@ -106,7 +107,7 @@ class DatabaseFunctions:
             
         except mysql.connector.Error as err:
             # Log and handle other errors
-            print(f"Error: {err}")
+            logging.error(f"Error: {err}")
             if conn:
                 conn.close()
             raise err
@@ -115,7 +116,7 @@ class DatabaseFunctions:
 
 @contextmanager
 def get_connection():
-    print("Getting connection")
+    logging.debug("Getting connection")
     conn = DatabaseFunctions.get_connection()
     try:
         yield conn

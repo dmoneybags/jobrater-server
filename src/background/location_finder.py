@@ -9,6 +9,7 @@ from io import BytesIO
 import json
 import time
 from datetime import datetime, timedelta
+import logging
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
@@ -56,11 +57,10 @@ class LocationFinder:
         Location object or none
     '''
     def try_get_company_address(company : str, location_str : str) -> Location | None:
-        print(type(company))
-        print(company)
+        logging.info("Querying google places for " + company + " at " + location_str)
         assert(type(company) == str)
         query : str = f"{company}, {location_str}"
-        print("Sending request to read company location with query: " +  query)
+        logging.debug("Sending request to read company location with query: " +  query)
         google_places_url : str = LocationFinder.base_url + f"?input={query}&inputtype=textquery&fields=name,formatted_address,geometry&key={GOOGLE_API_KEY}"
         response : requests.Response = requests.get(google_places_url)
         data : Dict = response.json()
@@ -100,19 +100,19 @@ class LocationFinder:
                     'mapImage': image_bytes.getvalue().decode('latin1')  # Encoding to pass binary data as a string
                 }
             else:
-                print("Failed to get map with: " + str(map_response.status_code))
-                print("Data:")
-                print(json.dumps(data))
-                print("args:")
-                print(json.dumps({"origin_latitude": origin_latitude, "origin_longitude": origin_longitude, 
+                logging.error("Failed to get map with: " + str(map_response.status_code))
+                logging.error("Data:")
+                logging.error(json.dumps(data))
+                logging.error("args:")
+                logging.error(json.dumps({"origin_latitude": origin_latitude, "origin_longitude": origin_longitude, 
                               "destination_latitude": destination_latitude, "destination_longitude": destination_longitude}))
                 return None
         else:
-            print("Failed to get directions with: " + data['status'])
-            print("Data:")
-            print(json.dumps(data))
-            print("args:")
-            print(json.dumps({"origin_latitude": origin_latitude, "origin_longitude": origin_longitude, 
+            logging.error("Failed to get directions with: " + data['status'])
+            logging.error("Data:")
+            logging.error(json.dumps(data))
+            logging.error("args:")
+            logging.error(json.dumps({"origin_latitude": origin_latitude, "origin_longitude": origin_longitude, 
                               "destination_latitude": destination_latitude, "destination_longitude": destination_longitude}))
             return None
     #Async because we run in parrallel with querying the census and hud apis
@@ -136,8 +136,8 @@ class LocationFinder:
                         'mapImage': image_bytes.getvalue().decode('latin1')  # Encoding to pass binary data as a string
                     }
                 else:
-                    print(f"Failed to get map with status code: {map_response.status}")
-                    print("args:")
-                    print(json.dumps({"origin_latitude": origin_latitude, "origin_longitude": origin_longitude}))
+                    logging.error(f"Failed to get map with status code: {map_response.status}")
+                    logging.error("args:")
+                    logging.error(json.dumps({"origin_latitude": origin_latitude, "origin_longitude": origin_longitude}))
                     return None
         

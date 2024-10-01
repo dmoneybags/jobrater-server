@@ -7,6 +7,7 @@ from mysql.connector.cursor import MySQLCursor
 from mysql.connector.connection_cext import CMySQLConnection
 from mysql.connector.errors import IntegrityError
 from mysql.connector.types import RowType, RowItemType
+import logging
 
 class UserLocationTable:
     '''
@@ -49,7 +50,7 @@ class UserLocationTable:
         the query str with %s for injection
     '''
     def __get_update_user_location_query(location_update_data : Dict) -> str:
-        print(location_update_data)
+        logging.info(location_update_data)
         cols : list[str] = list(location_update_data.keys())
         col_str : str = "=%s, ".join(cols)
         #add on last replacement str
@@ -74,7 +75,7 @@ class UserLocationTable:
     def add_user_location(location: Location, user_id: UUID | str) -> int:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
-                print("ADDING USER LOCATION")
+                logging.info("ADDING USER LOCATION")
                 location_json : Dict = location.to_json()
                 query = UserLocationTable.__get_add_location_query(location_json)
                 #unpack values
@@ -83,8 +84,8 @@ class UserLocationTable:
                     cursor.execute(query, params)
                     conn.commit()
                 except IntegrityError:
-                    print("User location already in db")
-        print(f"ADDED USER LOCATION")
+                    logging.info("User location already in db")
+        logging.info(f"ADDED USER LOCATION")
         return 0
     '''
     try_read_location
@@ -99,7 +100,7 @@ class UserLocationTable:
     def try_read_location(user_id : UUID | str) -> Location | None:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
-                print("READING USER LOCATION OBJECT")
+                logging.info("READING USER LOCATION OBJECT")
                 query : str = UserLocationTable.__get_read_location_query()
                 cursor.execute(query, (str(user_id),))
                 result : (Dict[str, RowItemType]) = cursor.fetchone()
@@ -120,7 +121,7 @@ class UserLocationTable:
     def update_location(user_id : UUID | str, location_json: Dict) -> Location | None:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
-                print("UPDATING USER LOCATION OBJECT")
+                logging.info("UPDATING USER LOCATION OBJECT")
                 update_str : str = UserLocationTable.__get_update_user_location_query(location_json)
                 #convert the values of our json to a list
                 #Our list will retain order
@@ -131,8 +132,8 @@ class UserLocationTable:
                 params : list = list(location_json.values())
                 params.append(str(user_id))
                 #Execute the query
-                print(update_str)
-                print(params)
+                logging.debug(update_str)
+                logging.debug(params)
                 cursor.execute(update_str, params)
                 conn.commit()
         return UserLocationTable.try_read_location(user_id)
@@ -151,7 +152,7 @@ class UserLocationTable:
     def delete_location(user_id : UUID | str) -> int:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
-                print("DELETING USER LOCATION OBJECT")
+                logging.info("DELETING USER LOCATION OBJECT")
                 query : str = UserLocationTable.__get_delete_location_query()
                 cursor.execute(query, (str(user_id),))
         return 0

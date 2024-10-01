@@ -7,6 +7,7 @@ from company import Company
 from mysql.connector.cursor import MySQLCursor
 from mysql.connector.connection_cext import CMySQLConnection
 from mysql.connector.types import RowType, RowItemType
+import logging
 
 
 class CompanyTable:
@@ -85,10 +86,10 @@ class CompanyTable:
             with conn.cursor(dictionary=True) as cursor:
                 company_json : Dict = company.to_json()
                 company_add_str : str = CompanyTable.__get_company_add_query(company_json)
-                print("ADDING COMPANY OF: ")
-                print(company_json)
+                logging.info("ADDING COMPANY OF: ")
+                logging.info(company_json)
                 cursor.execute(company_add_str, list(company_json.values()))
-                print("COMPANY SUCCESSFULLY ADDED")
+                logging.info("COMPANY SUCCESSFULLY ADDED")
                 conn.commit()
         return 0
     '''
@@ -103,15 +104,17 @@ class CompanyTable:
     '''
     def read_company_by_id(company_name : str) -> Company | None:
         #put in try except, return custom error if doesn't work
-        print(f"Reading db to for company: {company_name}")
+        logging.info(f"Reading db to for company: {company_name}")
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
                 query : str = CompanyTable.__get_read_company_by_name_query()
                 cursor.execute(query, (company_name,))
                 result : Dict[str, RowItemType] = cursor.fetchone()
-                print(result)
+                logging.debug(result)
                 if not result or None in result:
+                    logging.info(f"Could not find {company_name}")
                     return None
+        logging.info(f"Successfully read for {company_name}")
         return Company.create_with_sql_row(result)
     '''
     update_company
@@ -128,7 +131,7 @@ class CompanyTable:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
                 company_json : Dict = company.to_json()
-                print("RECIEVED MESSAGE TO UPDATE Company WITH ID " + company_json["companyName"])
+                logging.info("Updating company WITH ID " + company_json["companyName"])
                 #Grab the specific update columns to add to our query
                 update : str = CompanyTable.__get_update_str_company(company_json)
                 #convert the values of our json to a list
@@ -138,8 +141,8 @@ class CompanyTable:
                 _ = params.pop(0)
                 params.append(company_json["companyName"])
                 #Execute the query
-                print(update)
-                print(params)
+                logging.debug(update)
+                logging.debug(params)
                 cursor.execute(update, params)
                 conn.commit()
         #return success
