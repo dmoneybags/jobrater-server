@@ -324,8 +324,6 @@ async def find_companies(query: str, session: WebDriver) -> List[FoundCompany]:
         data = json.loads(result)
     except Exception as e:
         logging.error("DATA CONVERSION FAILED FOR: " + result)
-        while(1):
-            pass
         raise e
     companies = []
     for result in data:

@@ -22,6 +22,12 @@ TO DO:
 load function, can be called when a user loads the app to grab all their data if not
 initialized
 '''
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s [%(threadName)s]: %(message)s',
+)
 
 from flask import Flask, abort, request, Response, jsonify
 from flask_bcrypt import Bcrypt
@@ -63,16 +69,10 @@ import traceback
 import asyncio
 import time
 import requests
-import logging
 from urllib.parse import quote
 from functools import partial
 from errors import DuplicateUserJob
 from gunicorn.app.base import BaseApplication
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s [%(threadName)s]: %(message)s',
-)
 
 load_dotenv() 
 
@@ -284,7 +284,7 @@ class DatabaseServer:
     def add_job():
         #start time
         st = time.time()
-        app.logger.info("============== GOT REQUEST TO ADD JOB ================")
+        logging.info("============== GOT REQUEST TO ADD JOB ================")
         logging.info(request.url)
         async def get_company_data_async(company: str) -> Dict:
             return await glassdoor_scraper.get_company_data(company)
