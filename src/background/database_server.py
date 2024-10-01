@@ -71,10 +71,6 @@ from errors import DuplicateUserJob
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s [%(threadName)s]: %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('server.log')
-    ]
 )
 
 load_dotenv() 
