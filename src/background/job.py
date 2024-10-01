@@ -9,6 +9,7 @@ from typing import Dict
 from location_finder import LocationFinder
 from user_specific_job_data import UserSpecificJobData
 import zlib
+import logging
 
 class JobInvalidData(Exception):
         def __init__(self, data: any, message : str ="INVALID DATA PASSED TO CONSTRUCTOR"):
@@ -148,8 +149,8 @@ class Job:
     '''
     @classmethod
     def create_with_sql_row(cls, sql_query_row: (Dict[str, RowItemType])) -> 'Job':
-        print("CREATING JOB WITH SQL ROW OF: ")
-        print(sql_query_row)
+        logging.info("CREATING JOB WITH SQL ROW OF: ")
+        logging.info(sql_query_row)
         company : Company | None = Company.create_with_sql_row(sql_query_row)
         location : Location | None = Location.try_get_location_from_sql_row(sql_query_row)
         job_id : str = sql_query_row["JobId"]

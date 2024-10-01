@@ -8,6 +8,7 @@ from mysql.connector.cursor import MySQLCursor
 from mysql.connector.connection_cext import CMySQLConnection
 from mysql.connector.types import RowType, RowItemType
 from typing import Dict
+import logging
 
 class UserTable:
     '''
@@ -86,9 +87,9 @@ class UserTable:
                 cursor.execute(query, (email,))
                 result: (Dict[str, RowItemType]) = cursor.fetchone()
         if not result:
-            print("COULD NOT FIND USER IN DB WITH EMAIL " + email)
+            logging.info("COULD NOT FIND USER IN DB WITH EMAIL " + email)
             return None
-        print("READ USER WITH EMAIL " + email + " GOT "+ str(result))
+        logging.info("READ USER WITH EMAIL " + email + " GOT "+ str(result))
         return User.create_with_sql_row(result)
     '''
     read_user_by_googleId
@@ -134,10 +135,10 @@ class UserTable:
                     pass
                 user_json["userId"] = str(user_json["userId"])
                 params : list[str] = list(user_json.values())
-                print(query)
-                print(params)
+                logging.debug(query)
+                logging.debug(params)
                 cursor.execute(query, params)
-                print("USER SUCCESSFULLY ADDED")
+                logging.info("USER SUCCESSFULLY ADDED")
                 conn.commit()
         return 0
     '''
@@ -153,6 +154,6 @@ class UserTable:
             with conn.cursor(dictionary=True) as cursor:
                 query : str = UserTable.__get_delete_user_by_email_query()
                 cursor.execute(query, (email,))
-                print("USER SUCCESSFULLY ADDED")
+                logging.info("USER SUCCESSFULLY ADDED")
                 conn.commit()
         return 0

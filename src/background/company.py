@@ -3,6 +3,7 @@ from mysql.connector.types import RowType, RowItemType
 from typing import Dict
 from decimal import Decimal
 from typing import Optional
+import logging
 
 class CompanyInvalidData(Exception):
         def __init__(self, data: any, message : str ="INVALID DATA PASSED TO CONSTRUCTOR"):
@@ -79,7 +80,7 @@ class Company:
             return cls(company_name, business_outlook_rating, career_opportunities_rating, ceo_rating, compensation_and_benefits_rating , culture_and_values_rating, diversity_and_inclusion_rating,
                        senior_management_rating, work_life_balance_rating, overall_rating, glassdoor_url)
         except KeyError as e:
-            print(f"FAILED TO CREATE COMPANY RECIEVED KEYERROR OF {e}")
+            logging.error(f"FAILED TO CREATE COMPANY RECIEVED KEYERROR OF {e}")
             raise CompanyInvalidData(sql_query_row)
     '''
     try_create_with_sql_row
@@ -119,8 +120,8 @@ class Company:
             return cls(company_name, business_outlook_rating, career_opportunities_rating, ceo_rating, compensation_and_benefits_rating , culture_and_values_rating, diversity_and_inclusion_rating,
                        senior_management_rating, work_life_balance_rating, overall_rating, glassdoor_url)
         except KeyError as e:
-            print(f"FAILED TO CREATE COMPANY RECIEVED KEYERROR OF {e}")
-            print("Returning empty company")
+            logging.error(f"FAILED TO CREATE COMPANY RECIEVED KEYERROR OF {e}")
+            logging.error("Returning empty company")
             return None
     '''
     create_with_json
@@ -199,8 +200,8 @@ class Company:
             return cls(company_name, business_outlook_rating, career_opportunities_rating, ceo_rating, compensation_and_benefits_rating , culture_and_values_rating, diversity_and_inclusion_rating,
                        senior_management_rating, work_life_balance_rating, overall_rating, glassdoor_url)
         except KeyError as e:
-            print(f"FAILED TO CREATE COMPANY RECIEVED KEYERROR OF {e}")
-            print("Returning empty company")
+            logging.error(f"FAILED TO CREATE COMPANY RECIEVED KEYERROR OF {e}")
+            logging.error("Returning empty company")
             return cls(company_name, 0, 0, 0, 0, 0, 0, 0, 0, 0, None)
     '''
     to_json

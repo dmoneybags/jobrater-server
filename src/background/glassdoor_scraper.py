@@ -52,8 +52,6 @@ import logging
 from selenium.webdriver.remote.remote_connection import LOGGER
 import time
 
-LOGGER.setLevel(logging.DEBUG)
-
 os.environ['MOZ_HEADLESS'] = '1'
 
 def get_random_header():
@@ -136,7 +134,7 @@ def get_random_header():
     return choice(headers_list)
 
 def get_driver(headless: bool = True):
-    print("generating driver...")
+    logging.info("generating driver...")
     # Set up the proxy
     proxy = Proxy()
     proxy.proxy_type = ProxyType.MANUAL
@@ -177,7 +175,7 @@ def extract_apollo_state(html):
     t = time.time()
     soup = BeautifulSoup(html, 'html.parser')
     script_tag = soup.find('script', id='__NEXT_DATA__')
-    print(f"Finding apollo script took {time.time() - t} seconds")
+    logging.info(f"Finding apollo script took {time.time() - t} seconds")
     if script_tag:
         data = script_tag.string.strip()
         if data:
@@ -186,13 +184,13 @@ def extract_apollo_state(html):
             json_data = json.loads(data)
             # Access nested properties
             apollo_cache = json_data["props"]["pageProps"]["apolloCache"]
-            print(f"Finding apollo state in json {time.time() - t} seconds")
+            logging.info(f"Finding apollo state in json {time.time() - t} seconds")
             return apollo_cache
     try:
         t = time.time()
         data = re.findall('apolloState":\s*({.+})};', html)[0]
         data = json.loads(data)
-        print(f"Using regex to find apollo state took {time.time() - t} seconds")
+        logging.info(f"Using regex to find apollo state took {time.time() - t} seconds")
         return data
     except IndexError:
         raise ValueError("No apollo state in html: " + html)
@@ -215,7 +213,7 @@ async def scrape_cache(url: str, session: WebDriver):
     """Scrape job listings"""
     t = time.time()
     session.get(url)
-    print(f"Requesting page from glassdoor took {time.time() - t} seconds")
+    logging.info(f"Requesting page from glassdoor took {time.time() - t} seconds")
     first_page_response = session.page_source  # Await here to fetch the first page asynchronously
     cache = extract_apollo_state(first_page_response)
     xhr_cache = cache["ROOT_QUERY"]
@@ -228,7 +226,7 @@ async def get_company_data(company: str) -> Dict:
             t = time.time()
             #block execution until we find the companies
             companies : list[FoundCompany] = await find_companies(company, client)
-            print(f"Getting companies took {time.time() - t} seconds")
+            logging.info(f"Getting companies took {time.time() - t} seconds")
             t = time.time()
             #Grab the url to the company
             if not len(companies):
@@ -245,12 +243,12 @@ async def get_company_data(company: str) -> Dict:
                     "glassdoorUrl": None
                 }
             company_data_url : str = companies[0]["url_reviews"]
-            print("Company Data Url: "+company_data_url)
+            logging.info("Company Data Url: "+company_data_url)
             #Await scraping the company data from json embeded in the html
             company_data_full : Dict = await scrape_cache(company_data_url, client)
-            print(f"Scraping cache took {time.time() - t} seconds")
+            logging.info(f"Scraping cache took {time.time() - t} seconds")
         except Exception as e:
-            print(f"ERROR!!!: GOT GLASSDOOR ERROR OF {e}")
+            logging.error(f"ERROR!!!: GOT GLASSDOOR ERROR OF {e}")
             return {
                     "overallRating": None,
                     "businessOutlookRating": None,
@@ -265,7 +263,7 @@ async def get_company_data(company: str) -> Dict:
             }
         finally:
             client.quit()
-    print(json.dumps(company_data_full, indent=2))
+    logging.info(json.dumps(company_data_full, indent=2))
     return {
         "overallRating": company_data_full["ratings"]["overallRating"],
         "businessOutlookRating": company_data_full["ratings"]["businessOutlookRating"],
@@ -315,17 +313,17 @@ class FoundCompany(TypedDict):
     url_salaries: str
 async def find_companies(query: str, session: WebDriver) -> List[FoundCompany]:
     """find company Glassdoor ID and name by query. e.g. "ebay" will return "eBay" with ID 7853"""
-    print("URL: " + f"https://www.glassdoor.com/searchsuggest/typeahead?numSuggestions=8&source=GD_V2&version=NEW&rf=full&fallback=token&input={query}")
+    logging.debug("URL: " + f"https://www.glassdoor.com/searchsuggest/typeahead?numSuggestions=8&source=GD_V2&version=NEW&rf=full&fallback=token&input={query}")
     # Set a realistic timeout
     # UPDATE, now set upstream
     url = f"https://www.glassdoor.com/searchsuggest/typeahead?numSuggestions=8&source=GD_V2&version=NEW&rf=full&fallback=token&input={query}"
-    print("URL: "+ url)
+    logging.debug("URL: "+ url)
     session.get(url)
     result: str = session.find_element(By.XPATH, "/html/body").text
     try:
         data = json.loads(result)
     except Exception as e:
-        print("DATA CONVERSION FAILED FOR: " + result)
+        logging.error("DATA CONVERSION FAILED FOR: " + result)
         while(1):
             pass
         raise e
