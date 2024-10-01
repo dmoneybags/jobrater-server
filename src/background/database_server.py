@@ -67,6 +67,7 @@ import logging
 from urllib.parse import quote
 from functools import partial
 from errors import DuplicateUserJob
+from gunicorn.app.base import BaseApplication
 
 logging.basicConfig(
     level=logging.INFO,
@@ -283,7 +284,7 @@ class DatabaseServer:
     def add_job():
         #start time
         st = time.time()
-        logging.info("============== GOT REQUEST TO ADD JOB ================")
+        app.logger.info("============== GOT REQUEST TO ADD JOB ================")
         logging.info(request.url)
         async def get_company_data_async(company: str) -> Dict:
             return await glassdoor_scraper.get_company_data(company)
@@ -991,7 +992,11 @@ class DatabaseServer:
             app.run(debug=False, host=HOST, port=PORT, ssl_context=(os.path.join(os.getcwd(), "cert.pem"), os.path.join(os.getcwd(), "key.pem")))
         except:
             DatabaseServer.shutdown()
-            
+
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)            
 if __name__ == '__main__':
     HelperFunctions.write_pid_to_temp_file("database_server")
     DatabaseServer.run()
