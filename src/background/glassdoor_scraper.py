@@ -154,6 +154,7 @@ def get_driver(headless: bool = True):
         'headers': header  # Inject custom headers into every request
     }
     firefox_options = Options()
+    firefox_options.add_argument("--headless")
     firefox_options.set_preference("network.proxy.type", 1)  # Manual proxy configuration
     firefox_options.set_preference("network.proxy.http", "127.0.0.1")  # Local proxy address
     firefox_options.set_preference("network.proxy.http_port", 8080)  # Proxy port
