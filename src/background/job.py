@@ -149,8 +149,8 @@ class Job:
     '''
     @classmethod
     def create_with_sql_row(cls, sql_query_row: (Dict[str, RowItemType])) -> 'Job':
-        logging.info("CREATING JOB WITH SQL ROW OF: ")
-        logging.info(sql_query_row)
+        logging.debug("CREATING JOB WITH SQL ROW OF: ")
+        logging.debug(sql_query_row)
         company : Company | None = Company.create_with_sql_row(sql_query_row)
         location : Location | None = Location.try_get_location_from_sql_row(sql_query_row)
         job_id : str = sql_query_row["JobId"]
