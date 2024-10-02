@@ -63,9 +63,15 @@ import traceback
 import asyncio
 import time
 import requests
+import logging
 from urllib.parse import quote
 from functools import partial
 from errors import DuplicateUserJob
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s [%(threadName)s]: %(message)s',
+)
 
 load_dotenv() 
 
@@ -81,6 +87,8 @@ PORT=int(os.environ.get("PORT", 5001))
 CANSCRAPEGLASSDOOR: bool = True
 MAPBOXKEY: str = os.environ["MAPBOX_KEY"]
 API_KEY : str = os.environ["GOOGLE_API_KEY"]
+
+#All frequently queried routes are timed. If a route isnt timed its not used extremely often
 
 class DatabaseServer:
     #########################################################################################
@@ -128,17 +136,21 @@ class DatabaseServer:
     '''
     @app.route('/get_salt_by_email', methods=["GET"])
     def get_salt_by_email():
-        print("Recieved Message to get salt by email")
+        #start time
+        st = time.time()
+        logging.info("============== GOT REQUEST TO GET SALT BY EMAIL ================")
+        logging.info(request.url)
         try:
             email : str = request.args.get('email', default="NO EMAIL LOADED", type=str)
-            print("Got email from request")
+            logging.debug("Got email from request")
         except:
-            print("Request of: " + request + " is invalid")
+            logging.error("Request of: " + request + " is invalid")
             #Invalid request
             return abort(403)
         user : User | None = UserTable.read_user_by_email(email)
         if not user:
             abort(404)
+        logging.info(f"============== END REQUEST TO GET SALT BY EMAIL TOOK {time.time() - st} seconds ================")
         return jsonify({'salt': user.salt})
     '''
     login
@@ -154,25 +166,30 @@ class DatabaseServer:
     '''
     @app.route('/login', methods=['POST'])
     def login():
+        #start time
+        st = time.time()
+        logging.info("============== GOT REQUEST TO LOGIN ================")
+        logging.info(request.url)
         email : str = request.args.get('email', default="NO EMAIL LOADED", type=str)
         password_hash : str = request.args.get('password', default="NO PASSWORD LOADED", type=str)
 
         user : User | None = UserTable.read_user_by_email(email)
         if not user:
             return 'User not found', 401
-        print("ATTEMPTING TO LOGIN USER: " + json.dumps(user.to_json()))
+        logging.info("ATTEMPTING TO LOGIN USER: " + json.dumps(user.to_json()))
         #PASSWORDS ARE SALTED AND HASHED! do not be scared...
-        print("HASH SENT BY CLIENT: " + password_hash)
-        print("HASH FOUND IN DB: " + user.password)
+        logging.debug("HASH SENT BY CLIENT: " + password_hash)
+        logging.debug("HASH FOUND IN DB: " + user.password)
         if not user.password == password_hash:
-            print("Passwords don't match")
+            logging.info("Passwords don't match")
             return 'Invalid email or password!', 401
         
         token, expiration_date = get_token(user)
 
         response : Response = jsonify({'token': token, 'user': user.to_json(), 'expirationDate': expiration_date})
-        print("LOGGED IN USER RETURNING RESPONSE: ")
-        print(response)
+        logging.info("LOGGED IN USER RETURNING RESPONSE: ")
+        logging.info(response)
+        logging.info(f"============== END REQUEST TO LOGIN TOOK {time.time() - st} seconds ================")
         return response
     '''
     register
@@ -189,53 +206,61 @@ class DatabaseServer:
     #NOTE: NEEDS TO BE ACID!!!
     @app.route('/register', methods=['POST'])
     def register():
-        print("GOT REQUEST TO REGISTER USER")
+        #start time
+        st = time.time()
+        logging.info("============== GOT REQUEST TO REGISTER ================")
+        logging.info(request.url)
         try:
             body = request.json
             user_json : Dict = body["user"]
-            print("Registering user of:")
-            print(json.dumps(user_json, indent=2))
+            logging.info("Registering user of:")
+            logging.info(json.dumps(user_json, indent=2))
             salt: Dict = body["salt"]
         except KeyError as e:
+            logging.error("User passed with invalid data, keyError trying to key")
             return "Bad User Data", 400
         try:
-            print("Loading user into Object...")
+            logging.info("Loading user into Object...")
             user : User = User.create_with_json(user_json)
         except UserInvalidData:
+            logging.error("User passed with invalid data")
             return "Bad User Data", 400
         if not user.password:
+            logging.error("User passed without password")
             return "Bad User Data", 400
         user.salt = salt
-        print("Checking if user exists...")
+        logging.debug("Checking if user exists...")
         if UserTable.read_user_by_email(user.email):
+            logging.info("User already exists, returning a 401")
             return 'User already exists!', 401
         
         user_id : UUID = str(uuid.uuid1())
         user.user_id = user_id
         if user.preferences:
             user.preferences.user_id = user_id
-        print("USER VALIDATED TO REGISTER")
+        logging.info("USER VALIDATED TO REGISTER")
 
         UserTable.add_user(user)
         
         #for debug, we will error in production if no preference
         if user.preferences:
-            print("ADDING PREFERENCES TO DB")
+            logging.info("ADDING PREFERENCES TO DB")
             UserPreferencesTable.add_user_preferences(user.preferences)
-            print("ADDED PREFERENCES TO DB")
+            logging.info("ADDED PREFERENCES TO DB")
         else:
-            print("NO PREFERENCES FOUND, ONLY NOT ERRORING FOR TESTING PURPOSES")
+            logging.info("NO PREFERENCES FOUND, ONLY NOT ERRORING FOR TESTING PURPOSES")
         if user.location:
-            print("ADDING LOCATION TO DB")
+            logging.info("ADDING LOCATION TO DB")
             UserLocationTable.add_user_location(user.location, user.user_id)
         else:
-            print("USER IS CHOOSING NOT TO ADD LOCATION")
+            logging.info("USER IS CHOOSING NOT TO ADD LOCATION")
 
         token, expiration_date = get_token(user)
 
-        print("Setting userId to " + user_id)
-        print("Setting token to " + token)
+        logging.info("Setting userId to " + user_id)
+        logging.info("Setting token to " + token)
 
+        logging.info(f"============== END REQUEST TO REGISTER TOOK {time.time() - st} seconds ================")
         return jsonify({'token': token, 'userId': user_id, 'expirationDate': expiration_date})
     #########################################################################################
 
@@ -256,7 +281,10 @@ class DatabaseServer:
     @app.route('/databases/add_job', methods=['POST'])
     @token_required
     def add_job():
-        print("=============== BEGIN ADD JOB =================")
+        #start time
+        st = time.time()
+        logging.info("============== GOT REQUEST TO ADD JOB ================")
+        logging.info(request.url)
         async def get_company_data_async(company: str) -> Dict:
             return await glassdoor_scraper.get_company_data(company)
 
@@ -268,12 +296,12 @@ class DatabaseServer:
         try:
             message : str = request.json
             job_json : Dict = message["job"]
-            print("=============== RECIEVED JOB JSON OF =========== \n\n")
-            print(json.dumps(job_json, indent=4))
+            logging.debug("=============== RECIEVED JOB JSON OF =========== \n\n")
+            logging.debug(json.dumps(job_json, indent=4))
             company_name: str = job_json["company"]["companyName"]
             if (not CompanyTable.read_company_by_id(company_name) and CANSCRAPEGLASSDOOR):
                 t1 = time.time()
-                print("RETRIEVING COMPANY FROM GLASSDOOR")
+                logging.info("RETRIEVING COMPANY FROM GLASSDOOR")
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 company_data: Dict = loop.run_until_complete(get_company_data_async(company_name))
@@ -288,15 +316,15 @@ class DatabaseServer:
                                             company_data["glassdoorUrl"])
                 job_json["company"] = company.to_json()
                 t2 = time.time()
-                print("Scraping glassdoor took: " + str(t2 - t1) + " seconds")
+                logging.info("Scraping glassdoor took: " + str(t2 - t1) + " seconds")
             print("\n\n")
         except json.JSONDecodeError:
-            print("YOUR JOB JSON OF " + message + "IS INVALID")
+            logging.error("YOUR JOB JSON OF " + message + "IS INVALID")
             #Invalid request
             abort(403)
-        print(job_json)
+        logging.debug(job_json)
         job : Job = Job.create_with_json(job_json)
-        print("RECIEVED MESSAGE TO ADD JOB WITH ID " + job_json["jobId"])
+        logging.info("RECIEVED MESSAGE TO ADD JOB WITH ID " + job_json["jobId"])
         #Call the database function to execute the insert
         #we complete the jobs data before returning it to the client
         #NOTE: Needs to be acid
@@ -305,7 +333,7 @@ class DatabaseServer:
         except DuplicateUserJob:
             abort(409) 
         assert(completeJob.company is not None)
-        print("============== END ADD JOB ================")
+        logging.info(f"============== END REQUEST TO ADD JOB TOOK {time.time() - st} seconds ================")
         return json.dumps({"job": completeJob.to_json()}), 200
     '''
     read_most_recent_job
@@ -320,15 +348,16 @@ class DatabaseServer:
     @app.route('/databases/read_most_recent_job', methods=['GET'])
     @token_required
     def read_most_recent_job():
-        print("=============== BEGIN READ MOST RECENT JOB =================")
+        logging.info("=============== BEGIN READ MOST RECENT JOB =================")
+        logging.info(request.url)
         #Call the database function to select and sort to the most recent job
         job : Job | None = JobTable.read_most_recent_job()
         if not job:
             #Not found
-            print("DB IS EMPTY")
+            logging.critical("DB IS EMPTY")
             abort(404)
-        print("RETURNING RESULT")
-        print("=============== END READ MOST RECENT JOB =================")
+        logging.debug("RETURNING RESULT")
+        logging.info("=============== END READ MOST RECENT JOB =================")
         return job.to_json()
     '''
     read_job_by_id
@@ -344,20 +373,21 @@ class DatabaseServer:
     @app.route('/databases/read_job_by_id', methods=['GET'])
     @token_required
     def read_job_by_id():
-        print("=============== BEGIN READ JOB BY ID =================")
+        logging.info("=============== BEGIN READ JOB BY ID =================")
+        logging.info(request.url)
         #Grab the jobId from the request, it is in the form of a string
         try:
             job_id : str = request.args.get('jobId', default="NO JOB ID LOADED", type=str)
         except:
             #invalid request
-            print("Your request of: " + request)
+            logging.info("Your request of: " + request)
             abort(403)
-        print("JOB ID:  " + job_id)
+        logging.info("JOB ID:  " + job_id)
         job : Job | None = JobTable.read_job_by_id(job_id)
         if not job:
-            print("JOB NOT IN DB")
+            logging.error("JOB NOT IN DB")
             abort(404)
-        print("=============== END READ JOB BY ID =================")
+        logging.info("=============== END READ JOB BY ID =================")
         return job.to_json()
     '''
     update_job
@@ -373,18 +403,19 @@ class DatabaseServer:
     @app.route('/databases/update_job', methods=['POST'])
     @token_required
     def update_job():
-        print("=============== BEGIN UPDATE JOB BY ID =================")
+        logging.info("=============== BEGIN UPDATE JOB BY ID =================")
+        logging.info(request.url)
         #We take an argument of the whole job data in the from a json string
         try:
             message : str = request.args.get('jobJson', default="NO JOB JSON LOADED", type=str)
             job_json : Dict = json.loads(message)
             job : Job = Job.create_with_json(job_json)
         except json.JSONDecodeError:
-            print("YOUR JOB JSON OF " + request + "IS INVALID")
+            logging.error("YOUR JOB JSON OF " + request + "IS INVALID")
             #Invalid request
             abort(403)
         JobTable.update_job(job)
-        print("=============== END UPDATE JOB BY ID =================")
+        logging.info("=============== END UPDATE JOB BY ID =================")
         return 'success', 200
     '''
     delete_job
@@ -400,17 +431,18 @@ class DatabaseServer:
     @app.route('/databases/delete_job', methods=['POST'])
     @token_required
     def delete_job():
-        print("=============== BEGIN DELETE JOB BY ID =================")
+        logging.info("=============== BEGIN DELETE JOB BY ID =================")
+        logging.info(request.url)
         #Get the job id from the request
         try:
             job_id : str = request.args.get('jobId', default="NO JOB ID LOADED", type=str)
         except:
-            print("Request of: " + request + " is invalid")
+            logging.error("Request of: " + request + " is invalid")
             #Invalid request
             abort(403)
         #run the sql code
         JobTable.delete_job_by_id(job_id)
-        print("=============== END DELETE JOB BY ID =================")
+        logging.info("=============== END DELETE JOB BY ID =================")
         return 'success', 200
     #
     #
@@ -437,10 +469,10 @@ class DatabaseServer:
         try:
             company : str = request.args.get('company', default="NO COMPANY LOADED", type=str)
         except:
-            print("Request of: " + request + " is invalid")
+            logging.error("Request of: " + request + " is invalid")
             #Invalid request
             abort(403)
-        print("Recieved message to read company: " + company)
+        logging.info("Recieved message to read company: " + company)
         company : Company | None = CompanyTable.read_company_by_id(company)
         if not company:
             abort(404)
@@ -468,7 +500,10 @@ class DatabaseServer:
     @app.route('/databases/get_user_data', methods=["GET"])
     @token_required
     def get_user_data():
-        print("=============== BEGIN GET USER DATA =================")
+        #start time
+        st = time.time()
+        logging.info("============== GOT REQUEST TO GET USER JOB ================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         if not token:
             return 'No token recieved', 401
@@ -482,41 +517,48 @@ class DatabaseServer:
         json_resumes : list[Dict] = [resume.to_json() for resume in resumes]
         best_resume_scores : Dict = ResumeComparisonCollection.get_best_resume_scores_object(jobs, user.user_id)
         return_json = {"user": user.to_json(), "jobs": json_jobs, "resumes": json_resumes, "bestResumeScores": best_resume_scores}
-        print("=============== END GET USER DATA =================")
+        logging.info(f"=============== END GET USER JOB TOOK {time.time() - st} seconds =================")
         return json.dumps(return_json)
     @app.route('/databases/update_user_job', methods=["POST"])
     def update_user_job():
-        print("=============== BEGIN UPDATE USER JOB =================")
+        #start time
+        st = time.time()
+        logging.info("============== GOT REQUEST TO UPDATE USER JOB ================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         if not token:
             return 'No token recieved', 401
         user : User | None = decode_user_from_token(token)
         if not user:
-            print("Couldn't find user")
+            logging.error("Couldn't find user")
             abort(404)
         job_id : str = request.args.get('jobId', default="NO JOB ID LOADED", type=str)
         if (job_id == "NO JOB ID LOADED"):
-            print("Couldn't find job")
+            logging.info("Couldn't find job")
             abort(400)
         update_json = request.get_json()["updateDict"]
+        logging.info(f"============== END REQUEST TO UPDATE USER JOB TOOK {time.time() - st} seconds ================")
         return json.dumps(UserJobTable.update_user_job(job_id, user.user_id, update_json).to_json())  
     @app.route('/databases/delete_user_job', methods=["POST"])
     @token_required
     def delete_user_job():
-        print("=============== BEGIN DELETE USER JOB =================")
+        #start time
+        st = time.time()
+        logging.info("============== GOT REQUEST TO DELETE USER JOB ================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         if not token:
             return 'No token recieved', 401
         user : User | None = decode_user_from_token(token)
         if not user:
-            print("Couldn't find user")
+            logging.error("Couldn't find user")
             abort(404)
         job_id : str = request.args.get('jobId', default="NO JOB ID LOADED", type=str)
         if (job_id == "NO JOB ID LOADED"):
-            print("Couldn't find job")
+            logging.error("Couldn't find job")
             abort(400)
         UserJobTable.delete_user_job(user.user_id, job_id)
-        print("=============== END DELETE USER JOB =================")
+        logging.info(f"=============== END DELETE USER JOB TOOK {time.time() - st} seconds=================")
         return 'success', 200
     '''
     delete_user
@@ -532,7 +574,8 @@ class DatabaseServer:
     @app.route('/databases/delete_user', methods=['POST'])
     @token_required
     def delete_user():
-        print("=============== BEGIN DELETE USER =================")
+        logging.info("=============== BEGIN DELETE USER =================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         if not token:
             return 'No token recieved', 401
@@ -543,7 +586,7 @@ class DatabaseServer:
         if not UserTable.read_user_by_email(user_email):
             return json.dumps({'message': 'User not in db'}), 401
         UserTable.delete_user_by_email(user_email)
-        print("=============== END DELETE USER =================")
+        logging.info("=============== END DELETE USER =================")
         return 'success', 200
     '''
     update_user_preferences
@@ -559,7 +602,10 @@ class DatabaseServer:
     @app.route('/databases/update_user_preferences', methods=['POST'])
     @token_required
     def update_user_preferences():
-        print("=============== BEGIN UPDATE USER PREFERENCES =================")
+        #start time
+        st = time.time()
+        logging.info("============== GOT REQUEST TO UPDATE USER PREFERENCES ================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         if not token:
             return 'No token recieved', 401
@@ -568,6 +614,7 @@ class DatabaseServer:
             return 'Invalid Token', 401
         updateJson: Dict = request.get_json()["updateJson"]
         newPreferences: UserPreferences = UserPreferencesTable.update_user_preferences(updateJson, user.user_id)
+        logging.info(f"============== END REQUEST TO UPDATE USER PREFERENCES {time.time() - st} seconds================")
         return json.dumps(newPreferences.to_json())
     '''
     update_user_location
@@ -583,7 +630,8 @@ class DatabaseServer:
     @app.route('/databases/update_user_location', methods=['POST'])
     @token_required
     def update_user_location():
-        print("=============== BEGIN UPDATE USER LOCATION =================")
+        logging.info("=============== BEGIN UPDATE USER LOCATION =================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         if not token:
             return 'No token recieved', 401
@@ -594,10 +642,12 @@ class DatabaseServer:
         #the user could not have a location yet, if they dont our update wont work, we have to add
         if (UserLocationTable.try_read_location(user.user_id)):
             newLocation: Location = UserLocationTable.update_location(user.user_id, updateJson)
+            logging.info("=============== END UPDATE USER LOCATION =================")
             return json.dumps(newLocation.to_json())
         else:
             location: Location = Location.try_get_location_from_json(updateJson)
             UserLocationTable.add_user_location(location, user.user_id)
+            logging.info("=============== END UPDATE USER LOCATION =================")
             return json.dumps(location.to_json())
     '''
     delete_user_location
@@ -610,7 +660,8 @@ class DatabaseServer:
     @app.route('/databases/delete_user_location', methods=['POST'])
     @token_required
     def delete_user_location():
-        print("=============== BEGIN DELETE USER LOCATION =================")
+        logging.info("=============== BEGIN DELETE USER LOCATION =================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         if not token:
             return 'No token recieved', 401
@@ -618,6 +669,7 @@ class DatabaseServer:
         if not user:
             return 'Invalid Token', 401
         UserLocationTable.delete_location(user.user_id)
+        logging.info("=============== END DELETE USER LOCATION =================")
         return "success", 200
     #
     # RESUME METHODS
@@ -638,19 +690,21 @@ class DatabaseServer:
     @app.route('/databases/add_resume', methods=['POST'])
     @token_required
     def add_resume():
-        print("=============== BEGIN ADD RESUME =================")
+        st = time.time()
+        logging.info("============== GOT REQUEST TO ADD RESUME ================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         user : User | None = decode_user_from_token(token)
         request_json: Dict = request.get_json()
         resume_json: Dict = request_json["resume"]
         #Check for the key first to make sure theres no keyError and then check to make sure its true
         if "replace" in request_json and request_json["replace"]:
-            print("REPLACING RESUME")
+            logging.info("REPLACING RESUME")
             ResumeTable.delete_resume(request_json["oldId"])
         resume: Resume = Resume.create_with_json(resume_json)
         resume.user_id = str(user.user_id)
         resume_json: Dict = ResumeTable.add_resume(user.user_id, resume)
-        print("=============== END ADD RESUME =================")
+        logging.info(f"=============== END ADD RESUME TOOK {time.time() - st} =================")
         return json.dumps(resume_json)
     '''
     delete_resume
@@ -667,7 +721,8 @@ class DatabaseServer:
     @app.route('/databases/delete_resume', methods=['POST'])
     @token_required
     def delete_resume():
-        print("=============== BEGIN DELETE RESUME =================")
+        logging.info("=============== BEGIN DELETE RESUME =================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         user : User | None = decode_user_from_token(token)
         resume_id: str = request.args.get('resumeId', default="NO RESUME LOADED", type=str)
@@ -677,12 +732,13 @@ class DatabaseServer:
         if (str(reread_resume.user_id) != str(user.user_id)):
             return 'Invalid Id', 403
         ResumeTable.delete_resume(resume_id)
-        print("=============== END DELETE RESUME =================")
+        logging.info("=============== END DELETE RESUME =================")
         return 'success', 200
     @app.route('/databases/read_resume', methods=['GET'])
     @token_required
     def read_resume():
-        print("=============== BEGIN READ RESUME =================")
+        logging.info("=============== BEGIN READ RESUME =================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         user : User | None = decode_user_from_token(token)
         resume_id: str = request.args.get('resumeId', default="NO RESUME LOADED", type=str)
@@ -692,12 +748,13 @@ class DatabaseServer:
         resume: Resume = ResumeTable.read_resume_by_id(resume_id)
         if resume:
             return json.dumps(resume.to_json())
-        print("=============== END READ RESUME =================")
+        logging.info("=============== END READ RESUME =================")
         return "Could not find resume with id", 404
     @app.route('/databases/update_resume', methods=['POST'])
     @token_required
     def update_resume():
-        print("=============== BEGIN UPDATE RESUME =================")
+        logging.info("=============== BEGIN UPDATE RESUME =================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         user : User | None = decode_user_from_token(token)
         resume_id: str = request.args.get('resumeId', default="NO RESUME LOADED", type=str)
@@ -708,7 +765,7 @@ class DatabaseServer:
         if (str(reread_resume.user_id) != str(user.user_id)):
             return 'Invalid Id', 403
         #wrap in try catch
-        print("=============== END UPDATE RESUME =================")
+        logging.info("=============== END UPDATE RESUME =================")
         return json.dumps(ResumeTable.update_resume_by_id(resume_id, user.user_id, update_json).to_json())
     '''
     compare_resumes
@@ -718,7 +775,8 @@ class DatabaseServer:
     @app.route('/databases/compare_resumes', methods=['POST'])
     @token_required
     def compare_resumes():
-        print("=============== BEGIN COMPARE RESUMES =================")
+        logging.info("=============== BEGIN COMPARE RESUMES =================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         user : User | None = decode_user_from_token(token)
         req_json = request.get_json()
@@ -729,7 +787,7 @@ class DatabaseServer:
         for resume in resumes:
             resume_comparison_data[resume.id] = ResumeComparison.get_resume_comparison_dict(job_description, job_id, resume, user.user_id)
         ResumeComparisonCollection.add_resume_comparisons(list(resume_comparison_data.values()))
-        print("=============== END COMPARE RESUMES =================")
+        logging.info("=============== END COMPARE RESUMES =================")
         return json.dumps(resume_comparison_data) 
     '''
     compare_resumes_by_id
@@ -739,7 +797,8 @@ class DatabaseServer:
     @app.route('/databases/compare_resumes_by_id', methods=['POST'])
     @token_required
     def compare_resumes_by_id():
-        print("=============== BEGIN COMPARE RESUMES BY ID =================")
+        logging.info("=============== BEGIN COMPARE RESUMES BY ID =================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         user : User | None = decode_user_from_token(token)
         req_json = request.get_json()
@@ -754,7 +813,7 @@ class DatabaseServer:
         resume: Resume = ResumeTable.read_resume_by_id(resume_id)
         resume_comparison_data = ResumeComparison.get_resume_comparison_dict(job_description, job_id, resume, user.user_id)
         ResumeComparisonCollection.add_resume_comparison(resume_comparison_data)
-        print("=============== END COMPARE RESUMES BY ID =================")
+        logging.info("=============== END COMPARE RESUMES BY ID =================")
         return json.dumps(resume_comparison_data) 
     '''
     get_specific_resume_comparison
@@ -768,29 +827,30 @@ class DatabaseServer:
     @app.route('/databases/get_specific_resume_comparison', methods=["GET"])
     @token_required
     def get_specific_resume_comparison():
-        print("=============== BEGIN GET SPECIFIC RESUME COMPARISON =================")
+        st = time.time()
+        logging.info("============== GOT REQUEST TO GET SPECIFIC RESUME COMPARISON ================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
-        print("Got request to get specific resume comparison")
         user : User | None = decode_user_from_token(token)
 
         job_id : str = request.args.get('jobId', default="NO JOB ID LOADED", type=str)
         resume_id : str = request.args.get('resumeId', default="NO RESUME ID LOADED", type=str)
-        print({"job_id": job_id})
-        print({"resume_id": resume_id})
+        logging.info({"job_id": job_id})
+        logging.info({"resume_id": resume_id})
         reread_resume: Resume = ResumeTable.read_resume_by_id(resume_id)
         if not reread_resume:
-            print("Resume not found")
+            logging.error("Resume not found")
             return "Resume not found", 404
         if (str(reread_resume.user_id) != str(user.user_id)):
-            print("Invalid Id")
+            logging.error("Invalid Id")
             return 'Invalid Id', 403
         resume_comparison = ResumeComparisonCollection.read_specific_resume_comparison(job_id, resume_id)
         if not resume_comparison:
-            print("Could not find resume comparison with ids")
+            logging.error("Could not find resume comparison with ids")
             return "Could not find resume comparison with ids", 404
         #Remove mongodb id
         del resume_comparison["_id"]
-        print("=============== END GET SPECIFIC RESUME COMPARISON =================")
+        logging.info(f"=============== END GET SPECIFIC RESUME COMPARISON TOOK {time.time() - st} seconds=================")
         return json.dumps(resume_comparison)
     '''
     FOR TESTING ONLY
@@ -804,7 +864,8 @@ class DatabaseServer:
     @app.route('/databases/compare_resumes_from_request', methods=['POST'])
     @token_required
     def compare_resume_from_request():
-        print("=============== BEGIN COMPARE RESUME FROM REQUEST =================")
+        logging.info("=============== BEGIN COMPARE RESUME FROM REQUEST =================")
+        logging.info(request.url)
         #is this double the db work because we're getting the user twice?
         #once from token required, once from this
         token : str = request.headers.get('Authorization')
@@ -812,43 +873,46 @@ class DatabaseServer:
         req_json = request.get_json()
         job_id = req_json["jobId"]
         job_description: str = req_json["jobDescription"]
-        print("Loaded job description")
+        logging.debug("Loaded job description")
         resume_json: Dict = request.get_json()["resume"]
         resume: Resume = Resume.create_with_json(resume_json)
-        print("got resumes")
+        logging.debug("got resumes")
         resume_comparison_data = ResumeComparison.get_resume_comparison_dict(job_description, job_id, resume, user.user_id)
         #Not going to add these to db, pretty much just for debugview
-        print("Returning data")
-        print("=============== END COMPARE RESUME FROM REQUEST =================")
+        logging.debug("Returning data")
+        logging.info("=============== END COMPARE RESUME FROM REQUEST =================")
         return json.dumps(resume_comparison_data) 
     
     @app.route('/databases/compare_resume_by_ids', methods=['GET'])
     @token_required
     def compare_resume_by_ids():
-        print("=============== BEGIN COMPARE RESUME BY IDS =================")
+        st = time.time()
+        logging.info("=============== GOT REQUEST TO COMPARE RESUME BY IDS =================")
+        logging.info(request.url)
         token : str = request.headers.get('Authorization')
         user : User | None = decode_user_from_token(token)
         job_id : str = request.args.get('jobId', default="NO JOB ID LOADED", type=str)
         resume_id : str = request.args.get('resumeId', default="NO RESUME ID LOADED", type=str)
         reread_resume: Resume = ResumeTable.read_resume_by_id(resume_id)
         if not reread_resume:
-            print(f"Could not find resume with id: {resume_id}")
+            logging.error(f"Could not find resume with id: {resume_id}")
             return "Resume not found", 404
         if (str(reread_resume.user_id) != str(user.user_id)):
             return 'Invalid Id', 403
         job : Job = JobTable.read_job_by_id(job_id)
         if not job:
-            print(f"Could not find job with id: {job_id}")
+            logging.error(f"Could not find job with id: {job_id}")
             return "Job not found", 404
         resume_comparison_data = ResumeComparison.get_resume_comparison_dict(job.description, job_id, reread_resume, user.user_id)
         ResumeComparisonCollection.add_resume_comparison(resume_comparison_data)
         #Remove mongodb id
         del resume_comparison_data["_id"]
-        print("=============== END COMPARE RESUME BY IDS =================")
+        logging.info(f"=============== END COMPARE RESUME BY IDS TOOK {time.time() - st} seconds =================")
         return json.dumps(resume_comparison_data)
     @app.route('/api/verify_address', methods=['GET'])
     def verify_address():
-        print("=============== BEGIN VERIFY ADDRESS =================")
+        logging.info("=============== BEGIN VERIFY ADDRESS =================")
+        logging.info(request.url)
         search_json: Dict = json.loads(request.args.get("searchJson"))
         if not search_json:
             return "No address sent", 400
@@ -857,23 +921,26 @@ class DatabaseServer:
         #quoting to uri encode it
         mapbox_response: Dict = requests.get(f"https://api.mapbox.com/geocoding/v5/{endpoint}/{quote(search_text)}.json?access_token={MAPBOXKEY}").json()
         main_location: Dict = mapbox_response["features"][0]
-        print("Verified location to:")
-        print(main_location)
-        print("=============== END VERIFY ADDRESS =================")
+        logging.info("Verified location to:")
+        logging.info(main_location)
         try:
+            logging.info("=============== END VERIFY ADDRESS =================")
             return json.dumps({"coordinates": main_location["geometry"]["coordinates"]})
         except KeyError:
+            logging.error("=============== END VERIFY ADDRESS =================")
+            logging.error("ERROR VERIFYING, GOT KEYERROR TRYING TO CREATE RETURN JSON")
             return "invalid location", 400
     @app.route('/api/directions', methods=['GET'])
     @token_required
     def get_directions():
-        print("=============== BEGIN GET DIRECTIONS =================")
+        logging.info("=============== BEGIN GET DIRECTIONS =================")
+        logging.info(request.url)
         origin_lat = request.args.get('originLat')
         origin_lng = request.args.get('originLng')
         dest_lat = request.args.get('destLat')
         dest_lng = request.args.get('destLng')
         if not origin_lat or not origin_lng or not dest_lat or not dest_lng:
-            print("MISSING PARAMETERS! Cannot get directions")
+            logging.error("MISSING PARAMETERS! Cannot get directions")
             return json.dumps({'message': 'Missing required parameters'}), 400
         responseJson = LocationFinder.get_directions(origin_lat, origin_lng, dest_lat, dest_lng)
         if not responseJson:
@@ -881,41 +948,45 @@ class DatabaseServer:
         responseJsonReversed = LocationFinder.get_directions(dest_lat, dest_lng, origin_lat, origin_lng, returning=True)
         responseJson["leavingDuration"] = responseJsonReversed["arrivingDuration"]
         responseJson["leavingTrafficDuration"] = responseJsonReversed["arrivingTrafficDuration"]
-        print("=============== END GET DIRECTIONS =================")
+        logging.info("=============== END GET DIRECTIONS =================")
         return json.dumps(responseJson), 200
     @app.route('/api/get_relocation_data', methods=['POST'])
     @token_required
     def get_relocation_data():
-        print("=============== BEGIN GET RELOCATION DATA =================")
+        st = time.time()
+        logging.info("=============== BEGIN GET RELOCATION DATA =================")
+        logging.info(request.url)
         req_json = request.get_json()
         location_json = req_json["location"]
         location = Location.try_get_location_from_json(location_json)
-        print("LOADED LOCATION!")
-        print(json.dumps(location_json, indent=2))
+        logging.debug("LOADED LOCATION!")
+        logging.debug(json.dumps(location_json, indent=2))
         if not location:
-            print("Failed to get location from request body")
+            logging.error("Failed to get location from request body")
             return json.dumps({'message': 'Missing required parameters'}), 400
         relocation_data = asyncio.run(RelocationDataGrabber.get_data(location))
+        logging.info(f"=============== END GET RELOCATION DATA TOOK {time.time() - st} seconds =================")
         return json.dumps(relocation_data), 200
     @app.route('/api/verify_token', methods=['GET'])
     def verify_token():
+        logging.debug("=============== BEGIN VERIFY TOKEN =================")
         token : str = request.headers.get('Authorization')
-        print(token)
+        logging.debug(token)
         try:
             user : User | None = decode_user_from_token(token)
+            logging.debug("=============== END VERIFY TOKEN =================")
             if user:
                 return "AUTHED", 200
             else:
                 return "NO_AUTH", 200
         except:
             return "NO_AUTH", 200
-    @app.route('/api/get_directions', methods=['GET'])
     def shutdown():
-        print("Handling database server shutdown")
+        logging.critical("Handling database server shutdown")
         HelperFunctions.handle_sigterm("database_server")
-        print("Shutdown successful")
+        logging.info("Shutdown successful")
     def run():
-        print("Running server")
+        logging.info("Running server")
         try:
             app.run(debug=False, host=HOST, port=PORT, ssl_context=(os.path.join(os.getcwd(), "cert.pem"), os.path.join(os.getcwd(), "key.pem")))
         except:

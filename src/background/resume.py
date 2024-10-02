@@ -7,6 +7,7 @@ from tika import parser
 import docx
 import io
 import json
+import logging
 
 class Resume:
     '''
@@ -97,7 +98,7 @@ class Resume:
     '''
     @classmethod
     def create_with_sql_row(cls, sql_query_row: (Dict[str, RowItemType])) -> 'Resume':
-        print("CREATING RESUME WITH SQL ROW")
+        logging.info("CREATING RESUME WITH SQL ROW")
         id: int = sql_query_row["Id"]
         user_id: str = sql_query_row["UserId"]
         name: str | None = sql_query_row["Name"]
@@ -123,9 +124,9 @@ class Resume:
     '''
     @classmethod
     def create_with_json(cls, jsonObj: Dict) -> 'Resume':
-        print("CREATING RESUME WITH JSON")
+        logging.info("CREATING RESUME WITH JSON")
         filtered_data = {k: v for k, v in jsonObj.items() if k not in ['fileContent', 'fileText']}
-        print(json.dumps(filtered_data, indent=2))
+        logging.info(json.dumps(filtered_data, indent=2))
         try:
             id: int = jsonObj["id"]
         except KeyError:
