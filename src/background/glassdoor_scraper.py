@@ -38,7 +38,7 @@ import asyncio
 import json
 import os
 import re
-from selenium import webdriver
+from seleniumwire import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.proxy import Proxy, ProxyType
 from selenium.webdriver.remote.webdriver import WebDriver, By
@@ -52,9 +52,7 @@ import logging
 from selenium.webdriver.remote.remote_connection import LOGGER
 import time
 
-LOGGER.setLevel(logging.DEBUG)
-
-os.environ['MOZ_HEADLESS'] = '1'
+#os.environ['MOZ_HEADLESS'] = '1'
 
 def get_random_header():
     headers_list : list[Dict] = [
@@ -136,40 +134,71 @@ def get_random_header():
     return choice(headers_list)
 
 def get_driver(headless: bool = True):
-    print("generating driver...")
-    # Set up the proxy
-    proxy = Proxy()
-    proxy.proxy_type = ProxyType.MANUAL
-    proxy.http_proxy = "127.0.0.1:8888"
-    proxy.ssl_proxy = "127.0.0.1:8888"
+    logging.info("generating driver...")
+    
     # Set up the headers
-    header: Dict = get_random_header()
-    profile = webdriver.FirefoxProfile()
-    profile.set_preference("intl.accept_languages", "en-US,en;q=0.9")
-    profile.set_preference('general.useragent.override', header["User-Agent"])
-    profile.set_preference("intl.accept_languages", header["Accept-Language"])
-    profile.set_preference("network.http.accept-encoding", header["Accept-Encoding"])
-    profile.set_preference("network.http.upgrade-insecure-requests", "1")
-    profile.set_preference("privacy.donottrackheader.enabled", True)
+    header: Dict = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "TE": "trailers",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Dest": "empty",
+        "Referer": "https://www.glassdoor.com/",
+        "Priority": "u=4",
+        "Connection": "keep-alive",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br, zstd",
+        "Accept": "*/*"
+    }
+    seleniumwire_options = {
+        'headers': header  # Inject custom headers into every request
+    }
+    # Configure Firefox profile
+    #profile = webdriver.FirefoxProfile()
+    #profile.set_preference("intl.accept_languages", "en-US,en;q=0.9")
+    #profile.set_preference("general.useragent.override", header["User-Agent"])
+    #profile.set_preference("network.http.accept-encoding", header["Accept-Encoding"])
+    #profile.set_preference("network.http.upgrade-insecure-requests", "1")
+    #profile.set_preference("privacy.donottrackheader.enabled", True)
+
+    # Disable WebDriver detection
+    #profile.set_preference("dom.webdriver.enabled", False)
+    #profile.set_preference("useAutomationExtension", False)
+
+    # Disable WebRTC (optional)
+    #profile.set_preference("media.peerconnection.enabled", False)
+    
+    # Disable Marionette to try and hide automation flags
+    #profile.set_preference("marionette.enabled", False)
+
     # Configure Firefox options
     firefox_options = Options()
-    #firefox_options.proxy = proxy
-    firefox_options.set_preference("dom.webdriver.enabled", False)
-    firefox_options.set_preference('useAutomationExtension', False)
-    firefox_options.set_preference("media.peerconnection.enabled", False)
-    # Optional: disable notifications and popups
-    firefox_options.set_preference("dom.webnotifications.enabled", False)
-    firefox_options.set_preference("dom.push.enabled", False)
-    #Faster loading
+    #firefox_options.profile = profile
+
+    # Optional: headless mode
+    #if headless:
+        #firefox_options.add_argument("--headless")
+
+    # Faster page load
     firefox_options.page_load_strategy = "eager"
-    if headless:
-        firefox_options.add_argument("--headless")
-    #firefox_options.proxy = proxy
-    firefox_options.profile = profile
+
+    # Suppress the 'controlled by automated test software' banner
+    #firefox_options.set_preference("dom.webdriver.enabled", False)
+    #firefox_options.set_preference("useAutomationExtension", False)
+
     # Initialize the WebDriver with the options
-    driver: WebDriver = webdriver.Firefox(options=firefox_options)
-    driver.set_window_size(header["screen-width"], header["screen-height"])
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    driver: webdriver.Firefox = webdriver.Firefox(options=firefox_options, seleniumwire_options=seleniumwire_options)
+
+    # Aggressive override of navigator properties
+    #driver.execute_script("""
+        #Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+        #Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4]});
+        #Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
+    #""")
+    #driver.execute_script(f"Object.defineProperty(document, 'referrer', {{get: () => 'https://www.glassdoor.com'}});")
+    # Set the window size
+    #driver.set_window_size(header["screen-width"], header["screen-height"])
+
     return driver
 
 def extract_apollo_state(html):
@@ -177,7 +206,7 @@ def extract_apollo_state(html):
     t = time.time()
     soup = BeautifulSoup(html, 'html.parser')
     script_tag = soup.find('script', id='__NEXT_DATA__')
-    print(f"Finding apollo script took {time.time() - t} seconds")
+    logging.info(f"Finding apollo script took {time.time() - t} seconds")
     if script_tag:
         data = script_tag.string.strip()
         if data:
@@ -186,13 +215,13 @@ def extract_apollo_state(html):
             json_data = json.loads(data)
             # Access nested properties
             apollo_cache = json_data["props"]["pageProps"]["apolloCache"]
-            print(f"Finding apollo state in json {time.time() - t} seconds")
+            logging.info(f"Finding apollo state in json {time.time() - t} seconds")
             return apollo_cache
     try:
         t = time.time()
         data = re.findall('apolloState":\s*({.+})};', html)[0]
         data = json.loads(data)
-        print(f"Using regex to find apollo state took {time.time() - t} seconds")
+        logging.info(f"Using regex to find apollo state took {time.time() - t} seconds")
         return data
     except IndexError:
         raise ValueError("No apollo state in html: " + html)
@@ -215,7 +244,7 @@ async def scrape_cache(url: str, session: WebDriver):
     """Scrape job listings"""
     t = time.time()
     session.get(url)
-    print(f"Requesting page from glassdoor took {time.time() - t} seconds")
+    logging.info(f"Requesting page from glassdoor took {time.time() - t} seconds")
     first_page_response = session.page_source  # Await here to fetch the first page asynchronously
     cache = extract_apollo_state(first_page_response)
     xhr_cache = cache["ROOT_QUERY"]
@@ -228,7 +257,7 @@ async def get_company_data(company: str) -> Dict:
             t = time.time()
             #block execution until we find the companies
             companies : list[FoundCompany] = await find_companies(company, client)
-            print(f"Getting companies took {time.time() - t} seconds")
+            logging.info(f"Getting companies took {time.time() - t} seconds")
             t = time.time()
             #Grab the url to the company
             if not len(companies):
@@ -245,12 +274,12 @@ async def get_company_data(company: str) -> Dict:
                     "glassdoorUrl": None
                 }
             company_data_url : str = companies[0]["url_reviews"]
-            print("Company Data Url: "+company_data_url)
+            logging.info("Company Data Url: "+company_data_url)
             #Await scraping the company data from json embeded in the html
             company_data_full : Dict = await scrape_cache(company_data_url, client)
-            print(f"Scraping cache took {time.time() - t} seconds")
+            logging.info(f"Scraping cache took {time.time() - t} seconds")
         except Exception as e:
-            print(f"ERROR!!!: GOT GLASSDOOR ERROR OF {e}")
+            logging.error(f"ERROR!!!: GOT GLASSDOOR ERROR OF {e}")
             return {
                     "overallRating": None,
                     "businessOutlookRating": None,
@@ -265,7 +294,7 @@ async def get_company_data(company: str) -> Dict:
             }
         finally:
             client.quit()
-    print(json.dumps(company_data_full, indent=2))
+    logging.info(json.dumps(company_data_full, indent=2))
     return {
         "overallRating": company_data_full["ratings"]["overallRating"],
         "businessOutlookRating": company_data_full["ratings"]["businessOutlookRating"],
@@ -315,33 +344,30 @@ class FoundCompany(TypedDict):
     url_salaries: str
 async def find_companies(query: str, session: WebDriver) -> List[FoundCompany]:
     """find company Glassdoor ID and name by query. e.g. "ebay" will return "eBay" with ID 7853"""
-    print("URL: " + f"https://www.glassdoor.com/searchsuggest/typeahead?numSuggestions=8&source=GD_V2&version=NEW&rf=full&fallback=token&input={query}")
+    logging.debug("URL: " + f"https://www.glassdoor.com/api-web/employer/find.htm?autocomplete=true&maxEmployersForAutocomplete=10&term={query}")
     # Set a realistic timeout
     # UPDATE, now set upstream
-    url = f"https://www.glassdoor.com/searchsuggest/typeahead?numSuggestions=8&source=GD_V2&version=NEW&rf=full&fallback=token&input={query}"
-    print("URL: "+ url)
+    url = f"https://www.glassdoor.com/api-web/employer/find.htm?autocomplete=true&maxEmployersForAutocomplete=10&term={query}"
+    logging.debug("URL: "+ url)
     session.get(url)
     result: str = session.find_element(By.XPATH, "/html/body").text
     try:
         data = json.loads(result)
     except Exception as e:
-        print("DATA CONVERSION FAILED FOR: " + result)
-        while(1):
-            pass
+        logging.error("DATA CONVERSION FAILED FOR: " + result)
         raise e
     companies = []
     for result in data:
-        if result["category"] == "company":
-            companies.append(
-                {
-                    "name": result["suggestion"],
-                    "id": result["employerId"],
-                    "url_overview": Url.overview(result["suggestion"], result["employerId"]),
-                    "url_jobs": Url.jobs(result["suggestion"], result["employerId"]),
-                    "url_reviews": Url.reviews(result["suggestion"], result["employerId"]),
-                    "url_salaries": Url.salaries(result["suggestion"], result["employerId"]),
-                }
-            )
+        companies.append(
+            {
+                "name": result["label"],
+                "id": result["id"],
+                "url_overview": Url.overview(result["label"], result["id"]),
+                "url_jobs": Url.jobs(result["label"], result["id"]),
+                "url_reviews": Url.reviews(result["label"], result["id"]),
+                "url_salaries": Url.salaries(result["label"], result["id"]),
+            }
+        )
     return companies
 class Url:
     """

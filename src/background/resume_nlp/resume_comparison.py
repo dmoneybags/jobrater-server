@@ -12,10 +12,6 @@ from resume import Resume
 from typing import Dict
 from uuid import UUID
 
-# Download stopwords from NLTK
-import nltk
-nltk.download('stopwords')
-
 client = OpenAI(api_key=os.environ["OPEN_AI_KEY"])
 
 np.set_printoptions(threshold=np.inf)

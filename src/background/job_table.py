@@ -17,6 +17,7 @@ from mysql.connector.types import RowType, RowItemType
 from job_location_table import LocationNotFound
 from errors import DuplicateUserJob
 import datetime
+import logging
 
 
 class JobTable: 
@@ -122,28 +123,28 @@ class JobTable:
         # ============== Company ===============
         if not CompanyTable.read_company_by_id(job.company.company_name):
             CompanyTable.add_company(job.company)
-            print("COMPANY SUCCESSFULLY ADDED")
+            logging.info("COMPANY SUCCESSFULLY ADDED")
         else:
-            print("COMPANY ALREADY IN DB")
+            logging.info("COMPANY ALREADY IN DB")
             job.company = CompanyTable.read_company_by_id(job.company.company_name)
         # =====================================
 
         # =============== Job =================
         try:
             JobTable.add_job(job)
-            print("JOB SUCCESSFULLY ADDED")
+            logging.info("JOB SUCCESSFULLY ADDED")
         except IntegrityError:
-            print("JOB ALREADY IN DB")
+            logging.info("JOB ALREADY IN DB")
         #add the job to the users db
         # =====================================
 
         # =========== User Job ================
         try:
             UserJobTable.add_user_job(user_id, job.job_id)
-            print("USER JOB ADDED")
+            logging.info("USER JOB ADDED")
             job.user_specific_job_data = UserSpecificJobData(False, False, datetime.datetime.utcnow())
         except IntegrityError:
-            print("USER JOB ALREADY IN DB")
+            logging.info("USER JOB ALREADY IN DB")
             raise DuplicateUserJob
         # =====================================
 
@@ -151,7 +152,7 @@ class JobTable:
         #TODO: ADD CHECK FOR IF LOCATION IS IN DB
         try:
             if job.location_str and job.mode != Mode.REMOTE:
-                print("No location sent, attempting to request from google places")
+                logging.info("No location sent, attempting to request from google places")
                 try:
                     job.location_object = JobLocationTable.get_and_add_location_for_job(job)
                 #Will indexerror if the location cant be found
@@ -160,10 +161,10 @@ class JobTable:
             else:
                 job.location_object = None
         except LocationNotFound:
-            print("COULD NOT FIND LOCATION FOR JOB: " + job.job_name)
+            logging.info("COULD NOT FIND LOCATION FOR JOB: " + job.job_name)
             job.location_object = None
         except IntegrityError:
-            print('job location already in DB')
+            logging.info('job location already in DB')
         # ======================================
         job.time_added = datetime.datetime.utcnow()
         return job
@@ -206,7 +207,7 @@ class JobTable:
                 cursor.execute(query)
                 #Grab the first
                 result : Dict[str, RowItemType] = cursor.fetchone()
-                print("Returning most recent job of " + result)
+                logging.info("Returning most recent job of " + result)
                 if not result:
                     return None
         return Job.create_with_sql_row(result)
@@ -229,8 +230,8 @@ class JobTable:
                 result : Dict[str, RowItemType] = cursor.fetchone()
                 if not result:
                     return None
-                print("Read job with id " + job_id + " of ")
-                print(result)
+                logging.info("Read job with id " + job_id + " of ")
+                logging.info(result)
         return Job.create_with_sql_row(result)
     '''
     update_job

@@ -9,6 +9,7 @@ from functools import wraps
 from typing import Callable, Tuple, Dict
 from user import User
 from user_table import UserTable
+import logging
 
 SECRET_KEY: str = os.environ["secret_key"]
 
@@ -30,24 +31,24 @@ def token_required(f: Callable) -> Callable:
     def decorated(*args, **kwargs)  -> Tuple[Response, int]:
         if 'Authorization' in request.headers:
             token: str = request.headers['Authorization']
-            print("Token found of ")
-            print(token)
+            logging.debug("Token found of ")
+            logging.debug(token)
             if not token:
-                print("token not found in headers")
+                logging.error("token not found in headers")
                 return jsonify({'message': 'Token is missing!'}), 401
         else:
-            print("Authorization not found in headers")
+            logging.error("Authorization not found in headers")
             return jsonify({'message': 'Token is missing!'}), 401
 
         try:
             user : User | None = decode_user_from_token(token)
-            print("Loaded user of ")
-            print(user)
+            logging.debug("Loaded user of ")
+            logging.debug(user)
             if user is None:
                 #CONVERSATION:
                 #An old cached token could cause this and server didn't really error. if for some reason read user by email errored
                 #it would return 500 but I think 401 is correct error
-                print("Couldn't decode user, returning 401")
+                logging.error("Couldn't decode user, returning 401")
                 return jsonify({'message': 'User not found!'}), 401
         except jwt.ExpiredSignatureError:
             return jsonify({'message': 'Token has expired!'}), 401
@@ -68,12 +69,12 @@ returns:
     user from token or none if token is invalid
 '''
 def decode_user_from_token(token : str) -> User | None:
-    print("DECODING TOKEN OF: ")
-    print(token)
+    logging.debug("DECODING TOKEN OF: ")
+    logging.debug(token)
     try:
         # Decode the JWT
         payload : Dict[str, any] = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        print(payload)
+        logging.debug(payload)
         # Extract user information
         user_email : str = payload.get("email")
         
@@ -84,12 +85,12 @@ def decode_user_from_token(token : str) -> User | None:
     #re-register/sign in
     except jwt.ExpiredSignatureError:
         # Handle expired token
-        print("Token has expired")
+        logging.error("Token has expired")
         return None
     
     except jwt.InvalidTokenError:
         # Handle invalid token
-        print("Invalid token")
+        logging.error("Invalid token")
         return None
 '''
 get_token

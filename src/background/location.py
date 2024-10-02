@@ -2,6 +2,7 @@
 from typing import Dict
 from mysql.connector.types import RowType, RowItemType
 from typing import Optional
+import logging
 
 class LocationInvalidData(Exception):
         def __init__(self, data: any, message : str ="INVALID DATA PASSED TO CONSTRUCTOR"):
@@ -113,9 +114,9 @@ class Location:
     '''
     @classmethod
     def create_from_google_places_response(cls, response_json : Dict) -> 'Location':
-        print("Creating location from google places response")
+        logging.info("Creating location from google places response")
         location_components : list[str] = response_json["formatted_address"].split(",")
-        print(location_components)
+        logging.info(location_components)
         #split it into its components
         addr_str : str = location_components[0]
         city : str = location_components[1]

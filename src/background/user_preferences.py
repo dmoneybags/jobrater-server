@@ -4,6 +4,7 @@ from decimal import Decimal
 from job import PaymentFrequency, Job
 from typing import Dict
 from mysql.connector.types import RowType, RowItemType
+import logging
 
 class UserPreferences:
     '''

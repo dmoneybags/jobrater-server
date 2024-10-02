@@ -11,6 +11,7 @@ from mysql.connector.errors import DataError
 from location import Location
 from mysql.connector.errors import IntegrityError
 from mysql.connector.types import RowType, RowItemType
+import logging
 
 class LocationNotFound(Exception):
         def __init__(self, data: any, message : str ="LOCATION NOT FOUND "):
@@ -82,14 +83,14 @@ class JobLocationTable:
     def add_job_location(location : Location, job : Job) -> int:
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
-                print("ADDING JOB LOCATION")
+                logging.info("ADDING JOB LOCATION")
                 #we do sql_friendly here because we dont need all foreign key data
                 job_json : Dict = job.to_sql_friendly_json()
                 company : str = job_json["company"]
                 location_str : str = job_json["locationStr"]
-                print(f"LOCATION_STR: {location_str}")
+                logging.debug(f"LOCATION_STR: {location_str}")
                 query_str : str = company + " " + location_str
-                print(f"QUERY_STR: {query_str}")
+                logging.debug(f"QUERY_STR: {query_str}")
                 location_json : Dict = location.to_json()
                 #unpack values
                 params = [query_str, job_json["jobId"], *list(location_json.values())]
@@ -98,12 +99,12 @@ class JobLocationTable:
                     cursor.execute(query, params)
                     conn.commit()
                 except IntegrityError:
-                    print("Job location already in db")
+                    logging.info("Job location already in db")
                 except DataError as e:
-                    print("DATA TOO LONG")
-                    print(json.dumps(location_json, indent=2))
+                    logging.error("DATA TOO LONG")
+                    logging.error(json.dumps(location_json, indent=2))
                     return 1
-                print(f"ADDED JOB LOCATION")
+                logging.info(f"ADDED JOB LOCATION")
         return 0
     '''
     try_read_location
@@ -121,9 +122,9 @@ class JobLocationTable:
             with conn.cursor(dictionary=True) as cursor:
                 #Switch to our jobDb
                 cursor.execute("USE JOBDB")
-                print("READING LOCATION OBJECT")
+                logging.info("READING LOCATION OBJECT")
                 query_str : str = company + " " + location_str
-                print(f"QUERY_STR: {query_str}")
+                logging.debug(f"QUERY_STR: {query_str}")
                 query : str = JobLocationTable.__get_read_location_query()
                 cursor.execute(query, (query_str,))
                 result : (Dict[str, RowItemType]) = cursor.fetchone()

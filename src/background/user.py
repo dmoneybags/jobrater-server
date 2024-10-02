@@ -6,6 +6,7 @@ from uuid import UUID
 from typing import Optional
 import json
 from user_preferences import UserPreferences
+import logging
 
 
 class UserInvalidData(Exception):
@@ -68,7 +69,7 @@ class User:
             if not google_id:
                 #hop out if we don't have a valid google id
                 raise KeyError
-            print("Loading google user")
+            logging.debug("Loading google user")
             try:
                 user_id = UUID(sql_query_row["UserId"])
                 email = sql_query_row["Email"]
@@ -81,8 +82,8 @@ class User:
                 raise UserInvalidData(json.dumps(sql_query_row))
         except KeyError as e:
             try:
-                print("Loading traditional user")
-                print(sql_query_row["UserId"])
+                logging.debug("Loading traditional user")
+                logging.debug(sql_query_row["UserId"])
                 user_id = UUID(sql_query_row["UserId"])
                 email = sql_query_row["Email"]
                 first_name = sql_query_row["FirstName"]
@@ -125,7 +126,7 @@ class User:
             if not google_id:
                 #hop out if we don't have a valid google id
                 raise KeyError
-            print("Loading google user")
+            logging.debug("Loading google user")
             try:
                 #hacky
                 user_id = UUID(json_object["userId"]) if json_object["userId"] is not None else ""
@@ -141,27 +142,27 @@ class User:
                 raise UserInvalidData(json.dumps(json_object))
         except KeyError as e:
             try:
-                print("Loading traditional user")
+                logging.debug("Loading traditional user")
                 user_id = UUID(json_object["userId"]) if json_object["userId"] is not None else ""
                 email = json_object["email"]
                 first_name = json_object["firstName"]
                 last_name = json_object["lastName"]
                 if "location" in list(json_object.keys()) and json_object["location"] is not None and json_object["location"] != "null":
-                    print("Attempting to load location")
+                    logging.debug("Attempting to load location")
                     location = Location.try_get_location_from_json(json_object["location"])
                 if "preferences" in list(json_object.keys()) and json_object["preferences"] is not None:
                     preferences = UserPreferences.create_from_json(json_object["preferences"])
                 password = json_object["password"] if "password" in json_object else None
                 salt = json_object["salt"] if "salt" in json_object else None
-                print("Loaded traditional user")
+                logging.debug("Loaded traditional user")
                 return cls(user_id, email, password, google_id, first_name, last_name, location, salt, preferences)
             except KeyError as e:
-                print("FAILED TO LOAD")
-                print(json.dumps(json_object))
+                logging.error("FAILED TO LOAD")
+                logging.error(json.dumps(json_object))
                 raise UserInvalidData(json.dumps(json_object))
             except Exception as e:
-                print("FAILED TO LOAD WITH MISCELLANEOUS EXCEPTION")
-                print(e)
+                logging.error("FAILED TO LOAD WITH MISCELLANEOUS EXCEPTION")
+                logging.error(e)
                 raise e
     '''
     to_json

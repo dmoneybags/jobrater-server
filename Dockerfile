@@ -39,8 +39,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN python3 -m nltk.downloader stopwords
+
 # Copy the entire project directory into the container
 COPY . .
 
 # Set the command to run your app
-CMD ["sh", "-c", "PYTHONPATH=src/background gunicorn -w 3 -b 0.0.0.0:5001 --certfile=cert.pem --keyfile=key.pem database_server:app"]
+CMD ["sh", "-c", "PYTHONPATH=src/background gunicorn -w 3 -b 0.0.0.0:5001 --certfile=cert.pem --keyfile=key.pem --log-level=info database_server:app"]
