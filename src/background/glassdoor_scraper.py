@@ -153,51 +153,18 @@ def get_driver(headless: bool = True):
     seleniumwire_options = {
         'headers': header  # Inject custom headers into every request
     }
-    # Configure Firefox profile
-    #profile = webdriver.FirefoxProfile()
-    #profile.set_preference("intl.accept_languages", "en-US,en;q=0.9")
-    #profile.set_preference("general.useragent.override", header["User-Agent"])
-    #profile.set_preference("network.http.accept-encoding", header["Accept-Encoding"])
-    #profile.set_preference("network.http.upgrade-insecure-requests", "1")
-    #profile.set_preference("privacy.donottrackheader.enabled", True)
-
-    # Disable WebDriver detection
-    #profile.set_preference("dom.webdriver.enabled", False)
-    #profile.set_preference("useAutomationExtension", False)
-
-    # Disable WebRTC (optional)
-    #profile.set_preference("media.peerconnection.enabled", False)
-    
-    # Disable Marionette to try and hide automation flags
-    #profile.set_preference("marionette.enabled", False)
-
-    # Configure Firefox options
     firefox_options = Options()
-    #firefox_options.profile = profile
-
-    # Optional: headless mode
-    #if headless:
-        #firefox_options.add_argument("--headless")
-
+    firefox_options.set_preference("network.proxy.type", 1)  # Manual proxy configuration
+    firefox_options.set_preference("network.proxy.http", "127.0.0.1")  # Local proxy address
+    firefox_options.set_preference("network.proxy.http_port", 8080)  # Proxy port
+    firefox_options.set_preference("network.proxy.ssl", "127.0.0.1")  # SSL proxy
+    firefox_options.set_preference("network.proxy.ssl_port", 8080)  # SSL port
+    firefox_options.set_preference("network.proxy.no_proxies_on", "localhost, 127.0.0.1") 
     # Faster page load
     firefox_options.page_load_strategy = "eager"
 
-    # Suppress the 'controlled by automated test software' banner
-    #firefox_options.set_preference("dom.webdriver.enabled", False)
-    #firefox_options.set_preference("useAutomationExtension", False)
-
     # Initialize the WebDriver with the options
     driver: webdriver.Firefox = webdriver.Firefox(options=firefox_options, seleniumwire_options=seleniumwire_options)
-
-    # Aggressive override of navigator properties
-    #driver.execute_script("""
-        #Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-        #Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4]});
-        #Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
-    #""")
-    #driver.execute_script(f"Object.defineProperty(document, 'referrer', {{get: () => 'https://www.glassdoor.com'}});")
-    # Set the window size
-    #driver.set_window_size(header["screen-width"], header["screen-height"])
 
     return driver
 
