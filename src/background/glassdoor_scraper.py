@@ -51,6 +51,7 @@ from threading import Lock
 import logging
 from selenium.webdriver.remote.remote_connection import LOGGER
 import time
+from glassdoor_cookie_manager import CookieManager
 
 #os.environ['MOZ_HEADLESS'] = '1'
 
@@ -166,7 +167,8 @@ def get_driver(headless: bool = True):
 
     # Initialize the WebDriver with the options
     driver: webdriver.Firefox = webdriver.Firefox(options=firefox_options, seleniumwire_options=seleniumwire_options)
-
+    driver.get("https://www.glassdoor.com/404")
+    CookieManager.load_cookies(driver)
     return driver
 
 def extract_apollo_state(html):
@@ -261,6 +263,7 @@ async def get_company_data(company: str) -> Dict:
                     "glassdoorUrl": None
             }
         finally:
+            CookieManager.dump_cookies(client)
             client.quit()
     logging.info(json.dumps(company_data_full, indent=2))
     return {
