@@ -300,6 +300,7 @@ class DatabaseServer:
             logging.debug("=============== RECIEVED JOB JSON OF =========== \n\n")
             logging.debug(json.dumps(job_json, indent=4))
             company_name: str = job_json["company"]["companyName"]
+            logging.info("CHECKING IF WE NEED TO SCRAPE GLASSDOOR")
             if (not CompanyTable.read_company_by_id(company_name) and CANSCRAPEGLASSDOOR):
                 t1 = time.time()
                 logging.info("RETRIEVING COMPANY FROM GLASSDOOR")
@@ -318,6 +319,8 @@ class DatabaseServer:
                 job_json["company"] = company.to_json()
                 t2 = time.time()
                 logging.info("Scraping glassdoor took: " + str(t2 - t1) + " seconds")
+            else:
+                logging.info("NO NEED TO SCRAPE GLASSDOOR")
             print("\n\n")
         except json.JSONDecodeError:
             logging.error("YOUR JOB JSON OF " + message + "IS INVALID")

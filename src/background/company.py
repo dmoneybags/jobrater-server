@@ -120,7 +120,7 @@ class Company:
             return cls(company_name, business_outlook_rating, career_opportunities_rating, ceo_rating, compensation_and_benefits_rating , culture_and_values_rating, diversity_and_inclusion_rating,
                        senior_management_rating, work_life_balance_rating, overall_rating, glassdoor_url)
         except KeyError as e:
-            logging.error(f"FAILED TO CREATE COMPANY RECIEVED KEYERROR OF {e}")
+            logging.error(f"FAILED TO CREATE COMPANY FROM SQL ROW RECIEVED KEYERROR OF {e}")
             logging.error("Returning empty company")
             return None
     '''
@@ -200,8 +200,8 @@ class Company:
             return cls(company_name, business_outlook_rating, career_opportunities_rating, ceo_rating, compensation_and_benefits_rating , culture_and_values_rating, diversity_and_inclusion_rating,
                        senior_management_rating, work_life_balance_rating, overall_rating, glassdoor_url)
         except KeyError as e:
-            logging.error(f"FAILED TO CREATE COMPANY RECIEVED KEYERROR OF {e}")
-            logging.error("Returning empty company")
+            logging.debug(f"FAILED TO CREATE COMPANY FROM JSON RECIEVED KEYERROR OF {e}")
+            logging.debug("Returning empty company")
             return cls(company_name, 0, 0, 0, 0, 0, 0, 0, 0, 0, None)
     '''
     to_json
