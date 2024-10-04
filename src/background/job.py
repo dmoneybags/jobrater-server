@@ -24,6 +24,7 @@ class PaymentFrequency(Enum):
     '''
     HOURLY = 1
     YEARLY = 2
+    MONTHLY = 3
 class Mode(IntEnum):
     '''
     Mode
@@ -104,7 +105,7 @@ class Job:
         payment_freq str
     '''
     def payment_frequency_to_str(payment_freq: PaymentFrequency) -> str:
-        payment_freq_list : list[str] = ["hr", "yr"]
+        payment_freq_list : list[str] = ["hr", "yr", "month"]
         return payment_freq_list[payment_freq.value - 1]
     '''
     payment_freq_to_mode
@@ -119,7 +120,7 @@ class Job:
     def str_to_payment_frequency(payment_freq_str : str | None) -> Mode | None:
         if payment_freq_str is None:
             return None
-        payment_freq_list : list[str] = ["hr", "yr"]
+        payment_freq_list : list[str] = ["hr", "yr", "month"]
         enum_value : int = payment_freq_list.index(payment_freq_str) + 1
         return PaymentFrequency(enum_value)
     '''
