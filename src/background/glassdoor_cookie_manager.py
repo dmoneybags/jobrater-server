@@ -36,7 +36,10 @@ class CookieManager:
 
             # Load cookies from the JSON file
             with open(filename, 'r') as f:
-                cookies = json.load(f)
+                try:
+                    cookies = json.load(f)
+                except json.decoder.JSONDecodeError:
+                    return
 
             # Add each cookie to the Selenium browser
             for cookie in cookies:

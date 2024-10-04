@@ -6,7 +6,7 @@ FROM python:3.12-slim
 # Set the working directory in the container
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y wget bzip2 libxtst6 libgtk-3-0 libx11-xcb-dev libdbus-glib-1-2 libxt6 libpci-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y wget bzip2 libaugeas0 libxtst6 libgtk-3-0 libx11-xcb-dev libdbus-glib-1-2 libxt6 libpci-dev && rm -rf /var/lib/apt/lists/*
 
 RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.35.0/geckodriver-v0.35.0-linux64.tar.gz && \
     tar -xvzf geckodriver-v0.35.0-linux64.tar.gz && \
@@ -45,4 +45,5 @@ RUN python3 -m nltk.downloader stopwords
 COPY . .
 
 # Set the command to run your app
-CMD ["sh", "-c", "PYTHONPATH=src/background gunicorn -w 3 -b 0.0.0.0:5001 --certfile=cert.pem --keyfile=key.pem --log-level=info database_server:app"]
+
+CMD ["sh", "-c", "PYTHONPATH=src/background gunicorn -w 3 -b 0.0.0.0:5001 --certfile=fullchain.pem --keyfile=privkey.pem --log-level=info database_server:app"]
