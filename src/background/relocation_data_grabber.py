@@ -123,11 +123,14 @@ class RelocationDataGrabber:
         }
         async with aiohttp.ClientSession() as session:
             async with session.get(RelocationDataGrabber.census_url, params=params) as response:
-                response_text = await response.text()
-                logging.debug(response_text)
-                response_json = await response.json()
-                logging.debug(json.dumps(response_json, indent=2))
-                return int(response_json[1][0])
+                if response.status == 200:
+                    response_text = await response.text()
+                    logging.debug(response_text)
+                    response_json = await response.json()
+                    logging.debug(json.dumps(response_json, indent=2))
+                    return int(response_json[1][0])
+                else:
+                    return None
 
     async def get_data(location : Location):
         walkability_task = RelocationDataGrabber.get_walkability(location)

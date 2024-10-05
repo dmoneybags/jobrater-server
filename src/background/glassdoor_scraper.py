@@ -52,6 +52,7 @@ import logging
 from selenium.webdriver.remote.remote_connection import LOGGER
 import time
 from glassdoor_cookie_manager import CookieManager
+import random
 
 #os.environ['MOZ_HEADLESS'] = '1'
 
@@ -137,9 +138,15 @@ def get_random_header():
 def get_driver(headless: bool = True):
     logging.info("generating driver...")
     
-    # Set up the headers
+    # Randomize the User-Agent and headers to appear like different users
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    ]
+    
     header: Dict = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "User-Agent": random.choice(user_agents),
         "TE": "trailers",
         "Sec-Fetch-Site": "same-origin",
         "Sec-Fetch-Mode": "cors",
@@ -151,24 +158,51 @@ def get_driver(headless: bool = True):
         "Accept-Encoding": "gzip, deflate, br, zstd",
         "Accept": "*/*"
     }
+    
+    # Inject custom headers into Selenium Wire requests
     seleniumwire_options = {
-        'headers': header  # Inject custom headers into every request
+        'headers': header
     }
+    
+    # Random delay to mimic real user behavior
+    def human_delay():
+        time.sleep(random.uniform(1, 3))
+
     firefox_options = Options()
-    firefox_options.add_argument("--headless")
-    firefox_options.set_preference("network.proxy.type", 1)  # Manual proxy configuration
-    firefox_options.set_preference("network.proxy.http", "127.0.0.1")  # Local proxy address
-    firefox_options.set_preference("network.proxy.http_port", 8080)  # Proxy port
-    firefox_options.set_preference("network.proxy.ssl", "127.0.0.1")  # SSL proxy
-    firefox_options.set_preference("network.proxy.ssl_port", 8080)  # SSL port
-    firefox_options.set_preference("network.proxy.no_proxies_on", "localhost, 127.0.0.1") 
-    # Faster page load
+    if headless:
+        firefox_options.add_argument("--headless")
+    
+    # Set preferences to hide automation traces
+    firefox_options.set_preference("dom.webdriver.enabled", False)
+    firefox_options.set_preference('useAutomationExtension', False)
+    firefox_options.set_preference("media.peerconnection.enabled", False)
+    firefox_options.set_preference("dom.webnotifications.enabled", False)
+    firefox_options.set_preference("dom.push.enabled", False)
+    firefox_options.set_preference("network.proxy.type", 1)
+    firefox_options.set_preference("network.proxy.http", "127.0.0.1")
+    firefox_options.set_preference("network.proxy.http_port", 8080)
+    firefox_options.set_preference("network.proxy.ssl", "127.0.0.1")
+    firefox_options.set_preference("network.proxy.ssl_port", 8080)
+    firefox_options.set_preference("network.proxy.no_proxies_on", "localhost, 127.0.0.1")
     firefox_options.page_load_strategy = "eager"
 
-    # Initialize the WebDriver with the options
+    # Initialize the WebDriver
     driver: webdriver.Firefox = webdriver.Firefox(options=firefox_options, seleniumwire_options=seleniumwire_options)
-    driver.get("https://www.glassdoor.com/404")
-    CookieManager.load_cookies(driver)
+    driver.set_window_size(*random.choice([(1920, 1080), (2560, 1440)]))
+    
+    # Random delay before executing scripts
+    #human_delay()
+    
+    # Hide 'webdriver' from the navigator object
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    
+    # Navigate to a dummy page and load cookies to simulate a real session
+    #driver.get("https://www.glassdoor.com/404")
+    #human_delay()
+    
+    #CookieManager.load_cookies(driver)
+    
+    # Return the driver
     return driver
 
 def extract_apollo_state(html):
@@ -221,6 +255,24 @@ async def scrape_cache(url: str, session: WebDriver):
     key = [key for key in xhr_cache.keys() if key.startswith("employerReviewsRG")][0]
     company_data = xhr_cache[key]
     return company_data
+def get_company_from_page_source(page_source: str, company_data_url: str):
+    cache = extract_apollo_state(page_source)
+    xhr_cache = cache["ROOT_QUERY"]
+    key = [key for key in xhr_cache.keys() if key.startswith("employerReviewsRG")][0]
+    company_data_full = xhr_cache[key]
+    logging.info(json.dumps(company_data_full, indent=2))
+    return {
+        "overallRating": company_data_full["ratings"]["overallRating"],
+        "businessOutlookRating": company_data_full["ratings"]["businessOutlookRating"],
+        "careerOpportunitiesRating": company_data_full["ratings"]["careerOpportunitiesRating"],
+        "ceoRating": company_data_full["ratings"]["ceoRating"],
+        "compensationAndBenefitsRating": company_data_full["ratings"]["compensationAndBenefitsRating"],
+        "cultureAndValuesRating": company_data_full["ratings"]["cultureAndValuesRating"],
+        "diversityAndInclusionRating": company_data_full["ratings"]["diversityAndInclusionRating"],
+        "seniorManagementRating": company_data_full["ratings"]["seniorManagementRating"],
+        "workLifeBalanceRating": company_data_full["ratings"]["workLifeBalanceRating"],
+        "glassdoorUrl": company_data_url
+    }
 async def get_company_data(company: str) -> Dict:
     with get_driver() as client:
         try:
@@ -325,6 +377,7 @@ async def find_companies(query: str, session: WebDriver) -> List[FoundCompany]:
     try:
         data = json.loads(result)
     except Exception as e:
+        time.sleep(100)
         logging.error("DATA CONVERSION FAILED FOR: " + result)
         raise e
     companies = []
