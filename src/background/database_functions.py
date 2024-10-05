@@ -53,11 +53,11 @@ class DatabaseFunctions:
     logging.info(IS_PRODUCTION)
     # Set database parameters based on the environment
     if IS_PRODUCTION:
-        HOST = "ip-172-31-11-79.us-west-1.compute.internal"
+        HOST = "13.52.58.77"
         MYSQLUSER = os.getenv("SQLUSER") 
         MYSQLPASSWORD = os.getenv("SQLPASSWORD")
         DATABASE = "JOBDB"
-        MONGODB_URL = "ip-172-31-3-247.us-west-1.compute.internal"
+        MONGODB_URL = f"mongodb://{os.getenv('MONGOUSER')}:{os.getenv('MONGOPASSWORD')}@13.52.39.32/Jobrater"
     else:
         HOST = "localhost"
         MYSQLUSER = "root"
