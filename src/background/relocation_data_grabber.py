@@ -103,6 +103,8 @@ class RelocationDataGrabber:
                         for subcandidate in candidate:
                             if subcandidate["zip_code"] == location.zip_code:
                                 return subcandidate["One-Bedroom"]
+                        #Force return if no match is found
+                        return candidate[0]["One-Bedroom"]
                     rent = candidate["One-Bedroom"]
                     logging.info(f"Got one-bedroom rent of {rent}")
                     return rent
