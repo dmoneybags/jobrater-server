@@ -16,7 +16,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 class LocationFinder:
     base_url : str = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
 
-    def get_next_monday_7am_timestamp() -> int:
+    def get_next_monday_9am_timestamp() -> int:
         """Returns the Unix timestamp for the next available Monday at 7:00 AM, at least a week away."""
         # Get current local time
         now = datetime.now()
@@ -26,7 +26,7 @@ class LocationFinder:
 
         # Create the timestamp for the next Monday at 7:00 AM
         next_monday_7am = now + timedelta(days=days_until_monday)
-        next_monday_7am = next_monday_7am.replace(hour=7, minute=0, second=0, microsecond=0)
+        next_monday_7am = next_monday_7am.replace(hour=9, minute=0, second=0, microsecond=0)
 
         # Convert the datetime to a Unix timestamp
         return int(time.mktime(next_monday_7am.timetuple()))
@@ -72,12 +72,21 @@ class LocationFinder:
     def get_directions(origin_latitude: float, origin_longitude: float, destination_latitude: float, destination_longitude: float, returning=False) -> Dict:
         # Make a request to Google Directions API
         directions_url = 'https://maps.googleapis.com/maps/api/directions/json'
-        params = {
-            'origin': f"{origin_latitude},{origin_longitude}",
-            'destination': f"{destination_latitude},{destination_longitude}",
-            'key': GOOGLE_API_KEY,
-            'departure_time': LocationFinder.get_next_monday_5pm_timestamp() if returning else LocationFinder.get_next_monday_7am_timestamp() 
-        }
+        params = None
+        if returning:
+            params = {
+                'origin': f"{origin_latitude},{origin_longitude}",
+                'destination': f"{destination_latitude},{destination_longitude}",
+                'key': GOOGLE_API_KEY,
+                'departure_time': LocationFinder.get_next_monday_5pm_timestamp()
+            }
+        else:
+            params = {
+                'origin': f"{origin_latitude},{origin_longitude}",
+                'destination': f"{destination_latitude},{destination_longitude}",
+                'key': GOOGLE_API_KEY,
+                'arrival_time': LocationFinder.get_next_monday_9am_timestamp()
+            }
         response : requests.Response = requests.get(directions_url, params=params)
 
         data = response.json()
