@@ -12,8 +12,6 @@ from resume import Resume
 from typing import Dict
 from uuid import UUID
 
-client = OpenAI(api_key=os.environ["OPEN_AI_KEY"])
-
 np.set_printoptions(threshold=np.inf)
 
 
@@ -104,20 +102,21 @@ class ResumeComparison:
         sorted_index_numpy = np.array(sorted_index_list)
         return np.array2string(sorted_index_numpy, formatter={'float_kind': lambda x: f"{x:.3f}"})
     def calculate_llm_info(job_description, resume_text):
-        response = client.chat.completions.create(model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant skilled in evaluating resumes based on job descriptions."},
-            {"role": "user", "content": f'''Job Description: {job_description}\n\nResume: {resume_text}\n\n
-             Please compare this resume to the job description. Provide a match score from 0 to 100, ensuring that scores are spread evenly across the entire range (0-100), and avoid favoring numbers that end in 5 or 0 (e.g. 25, 30, 45). 
-             List up to 3 pros and 3 cons of the resume, and suggest tips for improvement. For easy scraping please format your response as JSON, with the key to
-             match score being matchScore, the key to pros being pros and pros being an array, the key to cons being cons and cons being an array, and tips for improvement
-             having a key of tips and being an array. Use "you" when referring to the candidate'''},
-            ])
-        response_text = response.choices[0].message.content
-        print(response_text)
-        startJsonIndex = response_text.find("{")
-        endJsonIndex = response_text.rfind("}")
-        response_json = json.loads(response_text[startJsonIndex:endJsonIndex+1])
+        with OpenAI(api_key=os.environ["OPEN_AI_KEY"]) as client:
+            response = client.chat.completions.create(model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant skilled in evaluating resumes based on job descriptions."},
+                {"role": "user", "content": f'''Job Description: {job_description}\n\nResume: {resume_text}\n\n
+                Please compare this resume to the job description. Provide a match score from 0 to 100, ensuring that scores are spread evenly across the entire range (0-100), and avoid favoring numbers that end in 5 or 0 (e.g. 25, 30, 45). 
+                List up to 3 pros and 3 cons of the resume, and suggest tips for improvement. For easy scraping please format your response as JSON, with the key to
+                match score being matchScore, the key to pros being pros and pros being an array, the key to cons being cons and cons being an array, and tips for improvement
+                having a key of tips and being an array. Use "you" when referring to the candidate'''},
+                ])
+            response_text = response.choices[0].message.content
+            print(response_text)
+            startJsonIndex = response_text.find("{")
+            endJsonIndex = response_text.rfind("}")
+            response_json = json.loads(response_text[startJsonIndex:endJsonIndex+1])
         return response_json
     def get_embedding_comparison_dict(job_description: str, job_id: str, resume: Resume, user_id: str | UUID) -> Dict:
         print("Loaded job description")
