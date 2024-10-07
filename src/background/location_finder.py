@@ -8,7 +8,7 @@ from location import Location
 from io import BytesIO
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -29,7 +29,10 @@ class LocationFinder:
         next_monday_8am = next_monday_8am.replace(hour=8, minute=0, second=0, microsecond=0)
 
         # Convert the datetime to a Unix timestamp
-        return int(time.mktime(next_monday_8am.timetuple()))
+        next_monday_8am_utc = next_monday_8am.astimezone(timezone.utc)
+        unix_timestamp = int(next_monday_8am_utc.timestamp())
+        
+        return unix_timestamp
 
     def get_next_monday_5pm_timestamp() -> int:
         """Returns the Unix timestamp for the next available Monday at 5:00 PM, at least a week away."""
@@ -44,7 +47,9 @@ class LocationFinder:
         next_monday_5pm = next_monday_5pm.replace(hour=17, minute=0, second=0, microsecond=0)
 
         # Convert the datetime to a Unix timestamp
-        return int(time.mktime(next_monday_5pm.timetuple()))
+        next_monday_5pm_utc = next_monday_5pm.astimezone(timezone.utc)
+        unix_timestamp = int(next_monday_5pm_utc.timestamp())
+        return unix_timestamp
     '''
     try_get_company_address
 
