@@ -22,7 +22,7 @@ class LocationFinder:
         now = datetime.now()
 
         # Calculate the number of days until the next Monday
-        days_until_monday = (7 - now.weekday()) % 7 + 7  # At least 7 days away
+        days_until_monday = (7 - now.weekday()) % 7  # At least 7 days away
 
         # Create the timestamp for the next Monday at 7:00 AM
         next_monday_8am = now + timedelta(days=days_until_monday)
@@ -40,7 +40,7 @@ class LocationFinder:
         now = datetime.now()
 
         # Calculate the number of days until the next Monday
-        days_until_monday = (7 - now.weekday()) % 7 + 7  # At least 7 days away
+        days_until_monday = (7 - now.weekday()) % 7 # At least 7 days away
 
         # Create the timestamp for the next Monday at 5:00 PM
         next_monday_5pm = now + timedelta(days=days_until_monday)

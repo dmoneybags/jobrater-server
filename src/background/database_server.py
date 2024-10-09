@@ -89,6 +89,8 @@ CANSCRAPEGLASSDOOR: bool = True
 MAPBOXKEY: str = os.environ["MAPBOX_KEY"]
 API_KEY : str = os.environ["GOOGLE_API_KEY"]
 
+ADDUSERJOBBYDEFAULT = False
+
 #All frequently queried routes are timed. If a route isnt timed its not used extremely often
 
 class DatabaseServer:
@@ -538,6 +540,28 @@ class DatabaseServer:
         return_json = {"user": user.to_json(), "jobs": json_jobs, "resumes": json_resumes, "bestResumeScores": best_resume_scores}
         logging.info(f"=============== END GET USER JOB TOOK {time.time() - st} seconds =================")
         return json.dumps(return_json)
+    #Not the most restful but returns the full list of jobs for a us
+    @app.route('/databases/add_user_job', methods=["POST"])
+    def add_user_job():
+        #start time
+        st = time.time()
+        logging.info("============== GOT REQUEST TO ADD USER JOB ================")
+        logging.info(request.url)
+        token : str = request.headers.get('Authorization')
+        if not token:
+            return 'No token recieved', 401
+        user : User | None = decode_user_from_token(token)
+        if not user:
+            logging.error("Couldn't find user")
+            abort(404)
+        job_id : str = request.args.get('jobId', default="NO JOB ID LOADED", type=str)
+        if (job_id == "NO JOB ID LOADED"):
+            logging.info("Couldn't find job")
+            abort(400)
+        addedJob: Job = UserJobTable.add_user_job(user.user_id, job_id)
+        logging.info(f"=============== END ADD USER JOB TOOK {time.time() - st} seconds=================")
+        return json.dumps(addedJob.to_json())
+
     @app.route('/databases/update_user_job', methods=["POST"])
     def update_user_job():
         #start time
@@ -1007,7 +1031,11 @@ class DatabaseServer:
     def run():
         logging.info("Running server")
         try:
-            app.run(debug=False, host=HOST, port=PORT, ssl_context=(os.path.join(os.getcwd(), "cert.pem"), os.path.join(os.getcwd(), "key.pem")))
+            if os.getenv("SERVER_ENVIRONMENT") != "development":
+                app.run(debug=False, host=HOST, port=PORT, ssl_context=(os.path.join(os.getcwd(), "cert.pem"), os.path.join(os.getcwd(), "key.pem")))
+            else:
+                logging.info("Running without ssl context")
+                app.run(debug=False, host=HOST, port=PORT)
         except:
             DatabaseServer.shutdown()
 

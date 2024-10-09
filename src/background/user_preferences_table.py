@@ -6,6 +6,7 @@ from mysql.connector.cursor import MySQLCursor
 from mysql.connector.connection_cext import CMySQLConnection
 from mysql.connector.errors import IntegrityError
 from user_preferences import UserPreferences
+from keyword_table import KeywordTable
 from job import Job
 import logging
 
@@ -71,6 +72,7 @@ class UserPreferencesTable:
     '''
     def add_user_preferences(preferences: UserPreferences) -> int:
         logging.info("ADDING USER PREFERENCES WITH USER ID " + str(preferences.user_id))
+        KeywordTable.add_keywords(str(preferences.user_id), preferences.positive_keywords, preferences.negative_keywords)
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
                 query : str = UserPreferencesTable.__get_add_user_preferences_query()

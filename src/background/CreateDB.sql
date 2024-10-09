@@ -119,3 +119,29 @@ CREATE TABLE UserPreferences
 CONSTRAINT UserPreferences_PK PRIMARY KEY (UserIdFk),
 CONSTRAINT UserPreferences_FK FOREIGN KEY (UserIdFk) REFERENCES User(UserId) ON DELETE CASCADE
 );
+CREATE TABLE KeywordList
+(
+    UserIdFk VARCHAR(36) NOT NULL,
+    PositiveKeyWord1 VARCHAR(255),
+    PositiveKeyWord2 VARCHAR(255),
+    PositiveKeyWord3 VARCHAR(255),
+    PositiveKeyWord4 VARCHAR(255),
+    PositiveKeyWord5 VARCHAR(255),
+    PositiveKeyWord6 VARCHAR(255),
+    PositiveKeyWord7 VARCHAR(255),
+    PositiveKeyWord8 VARCHAR(255),
+    PositiveKeyWord9 VARCHAR(255),
+    PositiveKeyWord10 VARCHAR(255),
+    NegativeKeyWord1 VARCHAR(255),
+    NegativeKeyWord2 VARCHAR(255),
+    NegativeKeyWord3 VARCHAR(255),
+    NegativeKeyWord4 VARCHAR(255),
+    NegativeKeyWord5 VARCHAR(255),
+    NegativeKeyWord6 VARCHAR(255),
+    NegativeKeyWord7 VARCHAR(255),
+    NegativeKeyWord8 VARCHAR(255),
+    NegativeKeyWord9 VARCHAR(255),
+    NegativeKeyWord10 VARCHAR(255),
+CONSTRAINT UserKeywords_PK PRIMARY KEY (UserIdFk),
+CONSTRAINT UserKeywords_FK FOREIGN KEY (UserIdFk) REFERENCES User(UserId) ON DELETE CASCADE
+);

@@ -116,7 +116,7 @@ class JobTable:
     returns:
         full job with all data for client
     '''
-    def add_job_with_foreign_keys(job : Job, user_id_uuid : UUID | str) -> Job:
+    def add_job_with_foreign_keys(job : Job, user_id_uuid : UUID | str, add_user_job=False) -> Job:
         user_id : str = str(user_id_uuid)
         #check that the company isn't already in our DB if it isn't then we add it
 
@@ -138,14 +138,15 @@ class JobTable:
         #add the job to the users db
         # =====================================
 
-        # =========== User Job ================
-        try:
-            UserJobTable.add_user_job(user_id, job.job_id)
-            logging.info("USER JOB ADDED")
-            job.user_specific_job_data = UserSpecificJobData(False, False, datetime.datetime.utcnow())
-        except IntegrityError:
-            logging.info("USER JOB ALREADY IN DB")
-            raise DuplicateUserJob
+        if add_user_job:
+            # =========== User Job ================
+            try:
+                UserJobTable.add_user_job(user_id, job.job_id)
+                logging.info("USER JOB ADDED")
+                job.user_specific_job_data = UserSpecificJobData(False, False, datetime.datetime.utcnow())
+            except IntegrityError:
+                logging.info("USER JOB ALREADY IN DB")
+                raise DuplicateUserJob
         # =====================================
 
         # =========== Location ================

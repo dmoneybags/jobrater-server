@@ -102,6 +102,15 @@ class UserJobTable:
         FROM UserJob
         WHERE UserJobId = %s
         """
+    def __get_read_specific_user_job_query_full_join() -> str:
+        return f"""
+        SELECT *
+        FROM UserJob
+        JOIN Job ON UserJob.JobId = Job.JobId
+        JOIN Company ON Job.Company = Company.CompanyName
+        LEFT JOIN JobLocation ON Job.JobId = JobLocation.JobIdFK
+        WHERE UserJobId = %s
+        """
     '''
     add_user_job
 
@@ -113,7 +122,7 @@ class UserJobTable:
     returns
         0 if no errors occured
     '''
-    def add_user_job(user_id_uuid : UUID | str, job_id : str) -> int:
+    def add_user_job(user_id_uuid : UUID | str, job_id : str) -> Job:
         user_id : str = str(user_id_uuid)
         logging.info("ADDING USER JOB WITH USER ID " + user_id + " AND JOB ID OF " + job_id)
         with get_connection() as conn:
@@ -130,7 +139,10 @@ class UserJobTable:
                     raise e
                 logging.info("USER JOB SUCCESSFULLY ADDED")
                 conn.commit()
-        return 0
+                read_query = UserJobTable.__get_read_specific_user_job_query_full_join()
+                cursor.execute(read_query, (user_job_id,))
+                added_row = cursor.fetchone()
+        return Job.create_with_sql_row(added_row)
     '''
     delete_user_job
 

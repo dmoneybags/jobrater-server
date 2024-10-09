@@ -1,6 +1,7 @@
 #(c) 2024 Daniel DeMoney. All rights reserved.
 import re
 import numpy as np
+import time
 import torch
 from nltk.corpus import stopwords
 from transformers import AutoTokenizer, AutoModel, AutoConfig
@@ -11,6 +12,7 @@ import json
 from resume import Resume
 from typing import Dict
 from uuid import UUID
+import logging
 
 np.set_printoptions(threshold=np.inf)
 
@@ -58,25 +60,39 @@ class ResumeComparison:
         return refined_sentences
 
     def get_embeddings(text):
+        def batch(iterable, n=1):
+            length = len(iterable)
+            for idx in range(0, length, n):
+                yield iterable[idx:min(idx + n, length)]
+        t1 = time.time()
         sentences = ResumeComparison.split_into_sentences(text)
         sentences = [ResumeComparison.preprocess(sentence) for sentence in sentences]
-        inputs = ResumeComparison.tokenizer(sentences, padding=True, truncation=True, return_tensors="pt")
 
-        # Get the embeddings from the model
-        with torch.no_grad():
-            outputs = ResumeComparison.model(**inputs)
-            hidden_states = outputs.last_hidden_state  # (batch_size, seq_len, hidden_size)
-            attention_weights = outputs.attentions[-1]  # (batch_size, num_heads, seq_len, seq_len)
+        embeddings_list = []
 
-            # Average over all heads (optional, depends on your use case)
-            attention_weights = attention_weights.mean(dim=1)  # (batch_size, seq_len, seq_len)
+        for sentence_batch in batch(sentences, 32):
+            inputs = ResumeComparison.tokenizer(sentence_batch, padding=True, truncation=True, return_tensors="pt")
 
-            # Apply attention weights to hidden states
-            weighted_hidden_states = torch.matmul(attention_weights, hidden_states)  # (batch_size, seq_len, hidden_size)
+            # Get the embeddings from the model
+            with torch.no_grad():
+                outputs = ResumeComparison.model(**inputs)
+                hidden_states = outputs.last_hidden_state
+                attention_weights = outputs.attentions[-1]
 
-            # Sum up the weighted hidden states for each token to get the final embedding
-            embeddings = weighted_hidden_states.sum(dim=1) 
-        return embeddings
+                # Average attention heads
+                attention_weights = attention_weights.mean(dim=1)
+
+                # Apply attention weights to hidden states
+                weighted_hidden_states = torch.matmul(attention_weights, hidden_states)
+
+                # Sum up the weighted hidden states for each token to get the final embedding
+                embeddings = weighted_hidden_states.sum(dim=1)
+                embeddings_list.append(embeddings)
+
+        # Concatenate all embeddings
+        final_embeddings = torch.cat(embeddings_list, dim=0)
+        logging.info(f"Generating embeddings took {time.time() - t1}")
+        return final_embeddings
     def get_similarity_matrix(job_description_text, resume_text):
         job_embeddings = ResumeComparison.get_embeddings(job_description_text)
         resume_embeddings = ResumeComparison.get_embeddings(resume_text)
@@ -102,6 +118,7 @@ class ResumeComparison:
         sorted_index_numpy = np.array(sorted_index_list)
         return np.array2string(sorted_index_numpy, formatter={'float_kind': lambda x: f"{x:.3f}"})
     def calculate_llm_info(job_description, resume_text):
+        t1 = time.time()
         with OpenAI(api_key=os.environ["OPEN_AI_KEY"]) as client:
             response = client.chat.completions.create(model="gpt-4o-mini",
             messages=[
@@ -113,22 +130,29 @@ class ResumeComparison:
                 having a key of tips and being an array. Use "you" when referring to the candidate'''},
                 ])
             response_text = response.choices[0].message.content
-            print(response_text)
+            logging.debug(response_text)
             startJsonIndex = response_text.find("{")
             endJsonIndex = response_text.rfind("}")
             response_json = json.loads(response_text[startJsonIndex:endJsonIndex+1])
+        logging.info(f"Loading CHATGPT info took {time.time() -t1} seconds")
         return response_json
     def get_embedding_comparison_dict(job_description: str, job_id: str, resume: Resume, user_id: str | UUID) -> Dict:
-        print("Loaded job description")
-        print(job_description)
+        logging.debug("Loaded job description")
+        logging.debug(job_description)
+        t1 = time.time()
         job_description_sentences: list[str] = ResumeComparison.split_into_sentences(job_description)
-        print("Loaded job sentences")
-        print(job_description_sentences)
-        print("Created necessary items")
+        logging.debug("Loaded job sentences")
+        logging.debug(job_description_sentences)
+        logging.debug("Created necessary items")
+        logging.info(f"Splitting into sentences took {time.time() -t1} seconds")
+        t2 = time.time()
         similarity_matrix = ResumeComparison.get_similarity_matrix(job_description, resume.file_text)
-        print("Loaded similarity matrix")
+        logging.info(f"Loading similarity took {time.time() -t2} seconds")
+        logging.debug("Loaded similarity matrix")
+        t3 = time.time()
         sorted_index_list = ResumeComparison.compare_embeddings(similarity_matrix)
-        print("Loaded sorted index list")
+        logging.info(f"Loading sorted index list took {time.time() -t3} seconds")
+        logging.debug("Loaded sorted index list")
         resume_sentences: list[str] = ResumeComparison.split_into_sentences(resume.file_text)
         resume_comparison_data: Dict = {
             "userId": str(user_id),

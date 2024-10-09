@@ -6,6 +6,8 @@ from typing import Dict
 from mysql.connector.types import RowType, RowItemType
 import logging
 
+NUMKEYWORDS = 10
+
 class UserPreferences:
     '''
     UserPreferences
@@ -30,7 +32,8 @@ class UserPreferences:
     '''
     def __init__(self, user_id: UUID, desired_pay: Decimal, desired_payment_freq: PaymentFrequency,
                  desired_commute: int, desires_remote: bool, desires_hybrid: bool, desires_onsite: bool, desired_career_stage: str,
-                 auto_activate_on_new_job_loaded: bool, auto_compare_resume_on_new_job_loaded: bool, save_every_job_by_default: bool) -> None:
+                 auto_activate_on_new_job_loaded: bool, auto_compare_resume_on_new_job_loaded: bool, save_every_job_by_default: bool, 
+                 positive_keywords, negative_keywords) -> None:
         self.user_id: UUID = user_id
         self.desired_pay: Decimal = desired_pay
         self.desired_payment_freq: PaymentFrequency = desired_payment_freq
@@ -43,6 +46,17 @@ class UserPreferences:
         self.auto_activate_on_new_job_loaded: bool = auto_activate_on_new_job_loaded
         self.auto_compare_resume_on_new_job_loaded: bool = auto_compare_resume_on_new_job_loaded
         self.save_every_job_by_default: bool = save_every_job_by_default
+        self.positive_keywords = positive_keywords
+        self.negative_keywords = negative_keywords
+    def get_keyword_lists(sql_query_row: (Dict[str, RowItemType])):
+        positiveKeywords = []
+        negativeKeywords = []
+        for i in range(1, NUMKEYWORDS + 1):
+            if sql_query_row[f"PositiveKeyWord{i}"]:
+                positiveKeywords.append(sql_query_row[f"PositiveKeyWord{i}"])
+            if sql_query_row[f"NegativeKeyWord{i}"]:
+                negativeKeywords.append(sql_query_row[f"NegativeKeyWord{i}"])
+        return positiveKeywords, negativeKeywords
     '''
     create_from_sql_query_row
 
@@ -71,9 +85,11 @@ class UserPreferences:
         auto_activate_on_new_job_loaded: bool = sql_query_row["AutoActiveOnNewJobLoaded"]
         auto_compare_resume_on_new_job_loaded: bool = sql_query_row["AutoCompareResumeOnNewJobLoaded"]
         save_every_job_by_default: bool = sql_query_row["SaveEveryJobByDefault"]
+        positive_keywords, negative_keywords = UserPreferences.get_keyword_lists(sql_query_row)
         return cls(user_id, desired_pay, desired_payment_freq,
                  desired_commute, desires_remote, desires_hybrid, desires_onsite, desired_career_stage,
-                 auto_activate_on_new_job_loaded, auto_compare_resume_on_new_job_loaded, save_every_job_by_default)
+                 auto_activate_on_new_job_loaded, auto_compare_resume_on_new_job_loaded, save_every_job_by_default,
+                 positive_keywords, negative_keywords)
     '''
     try_create_from_sql_query_row
 
@@ -87,7 +103,9 @@ class UserPreferences:
     def try_create_from_sql_query_row(sql_query_row: (Dict[str, RowItemType])) -> 'UserPreferences':
         try:
             return UserPreferences.create_from_sql_query_row(sql_query_row)
-        except KeyError:
+        except KeyError as e:
+            logging.critical("FAILED TO READ A USERS PREFERENCES")
+            logging.critical(e)
             return None
     '''
     create_from_json
@@ -114,9 +132,12 @@ class UserPreferences:
         auto_activate_on_new_job_loaded: bool = json_object["autoActiveOnNewJobLoaded"]
         auto_compare_resume_on_new_job_loaded: bool = json_object["autoCompareResumeOnNewJobLoaded"]
         save_every_job_by_default: bool = json_object["saveEveryJobByDefault"]
+        positive_keywords: list[str] = json_object["positiveKeywords"]
+        negative_keywords: list[str] = json_object["negativeKeywords"]
         return cls(user_id, desired_pay, desired_payment_freq,
                  desired_commute, desires_remote, desires_hybrid, desires_onsite, desired_career_stage,
-                 auto_activate_on_new_job_loaded, auto_compare_resume_on_new_job_loaded, save_every_job_by_default)
+                 auto_activate_on_new_job_loaded, auto_compare_resume_on_new_job_loaded, save_every_job_by_default,
+                 positive_keywords, negative_keywords)
     '''
     try_create_from_json
 
@@ -144,7 +165,9 @@ class UserPreferences:
             "desiredCareerStage": self.desired_career_stage,
             "autoActiveOnNewJobLoaded": self.auto_activate_on_new_job_loaded,
             "autoCompareResumeOnNewJobLoaded": self.auto_compare_resume_on_new_job_loaded,
-            "saveEveryJobByDefault": self.save_every_job_by_default
+            "saveEveryJobByDefault": self.save_every_job_by_default,
+            "positiveKeywords": self.positive_keywords,
+            "negativeKeywords": self.negative_keywords
         }
 
         

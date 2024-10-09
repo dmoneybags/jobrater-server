@@ -27,6 +27,8 @@ class UserTable:
             ON User.UserId = UserLocation.UserIdFk
             LEFT JOIN UserPreferences
             ON User.UserId = UserPreferences.UserIdFk
+            LEFT JOIN KeywordList
+            ON User.UserId = KeywordList.UserIdFk
             WHERE Email = %s;
         """
     '''
@@ -45,6 +47,8 @@ class UserTable:
             ON User.UserId = UserLocation.UserId
             LEFT JOIN UserPreferences
             ON User.UserId = UserPreferences.UserIdFk
+            LEFT JOIN KeywordList
+            ON User.UserId = KeywordList.UserIdFk
             WHERE Google_Id = %s;
         """
     '''
