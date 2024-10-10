@@ -50,6 +50,7 @@ from company_table import CompanyTable
 from resume_table import ResumeTable
 from user_location_table import UserLocationTable
 from user_preferences_table import UserPreferencesTable
+from keyword_table import KeywordTable
 from user import UserInvalidData
 from resume_nlp.resume_comparison import ResumeComparison
 from resume_comparison_collection import ResumeComparisonCollection
@@ -659,6 +660,39 @@ class DatabaseServer:
         newPreferences: UserPreferences = UserPreferencesTable.update_user_preferences(updateJson, user.user_id)
         logging.info(f"============== END REQUEST TO UPDATE USER PREFERENCES {time.time() - st} seconds================")
         return json.dumps(newPreferences.to_json())
+    '''
+    update_user_keywords
+
+    updates a users preferences when passed a json dictionary containing a list of positive keywords and a list
+    of negative keywords
+
+    Full lists must be passed, its not a delta
+
+    args:
+        request
+            body["positiveKeywords"]
+            body["negativeKeywords"]
+    returns:
+        "success"
+    '''
+    @app.route('/databases/update_user_keywords', methods=['POST'])
+    @token_required
+    def update_user_keywords():
+        #start time
+        st = time.time()
+        logging.info("============== GOT REQUEST TO UPDATE USER KEYWORDS ================")
+        logging.info(request.url)
+        token : str = request.headers.get('Authorization')
+        if not token:
+            return 'No token recieved', 401
+        user : User | None = decode_user_from_token(token)
+        if not user:
+            return 'Invalid Token', 401
+        positive_keywords: Dict = request.get_json()["positiveKeywords"]
+        negative_keywords: Dict = request.get_json()["negativeKeywords"]
+        KeywordTable.update_keywords(str(user.user_id), positive_keywords, negative_keywords)
+        logging.info(f"============== END REQUEST TO UPDATE USER KEYWORDS {time.time() - st} seconds================")
+        return "success", 200
     '''
     update_user_location
 
