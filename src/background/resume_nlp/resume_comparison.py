@@ -4,10 +4,13 @@ import numpy as np
 import time
 import torch
 from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import wordnet
 from transformers import AutoTokenizer, AutoModel, AutoConfig
 from sentence_transformers import util
 import os
 from openai import OpenAI
+import asyncio
 import json
 from resume import Resume
 from typing import Dict
@@ -19,9 +22,9 @@ np.set_printoptions(threshold=np.inf)
 
 # Download NLTK stop words list if not already downloaded
 class ResumeComparison:
-    config = AutoConfig.from_pretrained("sentence-transformers/all-roberta-large-v1", output_attentions=True)
-    tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-roberta-large-v1")
-    model = AutoModel.from_pretrained("sentence-transformers/all-roberta-large-v1", config=config)
+    config = AutoConfig.from_pretrained("sentence-transformers/paraphrase-MiniLM-L6-v2", output_attentions=True)
+    tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/paraphrase-MiniLM-L6-v2")
+    model = AutoModel.from_pretrained("sentence-transformers/paraphrase-MiniLM-L6-v2", config=config)
     stop_words = set(stopwords.words('english'))
 
     def preprocess(text):
@@ -117,25 +120,102 @@ class ResumeComparison:
         sorted_index_list = [list(a) for a in sorted_index_list]
         sorted_index_numpy = np.array(sorted_index_list)
         return np.array2string(sorted_index_numpy, formatter={'float_kind': lambda x: f"{x:.3f}"})
-    def calculate_llm_info(job_description, resume_text):
+    def clean_llm_text(text):
         t1 = time.time()
+        text = text.lower().strip()
+        text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+        text = ' '.join([word for word in text.split() if word not in ResumeComparison.stop_words])
+        # Remove extra whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
+        lemmatizer = WordNetLemmatizer()
+        words = text.split()
+        lemmatized_words = [lemmatizer.lemmatize(word, wordnet.VERB) for word in words]
+        print(f"Prepocessing llm took text took {time.time() - t1}")
+        return ' '.join(lemmatized_words)
+        #return text
+    def calculate_llm_info(job_description: str, resume_text: str):
+        # Assuming clean_llm_text is synchronous, otherwise make it async
+        job_description = ResumeComparison.clean_llm_text(job_description)
+        resume_text = ResumeComparison.clean_llm_text(resume_text)
+        
+        t1 = time.time()
+
         with OpenAI(api_key=os.environ["OPEN_AI_KEY"]) as client:
-            response = client.chat.completions.create(model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant skilled in evaluating resumes based on job descriptions."},
-                {"role": "user", "content": f'''Job Description: {job_description}\n\nResume: {resume_text}\n\n
-                Please compare this resume to the job description. Provide a match score from 0 to 100, ensuring that scores are spread evenly across the entire range (0-100), and avoid favoring numbers that end in 5 or 0 (e.g. 25, 30, 45). 
-                List up to 3 pros and 3 cons of the resume, and suggest tips for improvement. For easy scraping please format your response as JSON, with the key to
-                match score being matchScore, the key to pros being pros and pros being an array, the key to cons being cons and cons being an array, and tips for improvement
-                having a key of tips and being an array. Use "you" when referring to the candidate'''},
-                ])
+            # Make the API request asynchronous
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant skilled in evaluating resumes based on job descriptions."},
+                    {"role": "user", "content": f'''Job Description: {job_description}\n\nResume: {resume_text}\n\n
+                    Please compare this preprocessed resume to this preprocessed job description. Provide a match score from 0 to 100, ensuring that scores are spread evenly across the entire range (0-100), and avoid favoring numbers that end in 5 or 0 (e.g. 25, 30, 45). 
+                    List up to 3 pros and 3 cons of the resume, and suggest tips for improvement. For easy scraping please format your response as JSON, with the key to
+                    match score being matchScore, the key to pros being pros and pros being an array, the key to cons being cons and cons being an array, and tips for improvement
+                    having a key of tips and being an array.'''},
+                ]
+            )
+            
             response_text = response.choices[0].message.content
             logging.debug(response_text)
+            
+            # Extract the JSON response
             startJsonIndex = response_text.find("{")
             endJsonIndex = response_text.rfind("}")
             response_json = json.loads(response_text[startJsonIndex:endJsonIndex+1])
-        logging.info(f"Loading CHATGPT info took {time.time() -t1} seconds")
+        
+        logging.info(f"Loading CHATGPT info took {time.time() - t1} seconds")
         return response_json
+    def calculate_llm_info_match_score_only(job_description: str, resume_text: str):
+        # Assuming clean_llm_text is synchronous, otherwise make it async
+        job_description = ResumeComparison.clean_llm_text(job_description)
+        resume_text = ResumeComparison.clean_llm_text(resume_text)
+        
+        t1 = time.time()
+
+        with OpenAI(api_key=os.environ["OPEN_AI_KEY"]) as client:
+            # Make the API request asynchronous
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant skilled in evaluating resumes based on job descriptions."},
+                    {"role": "user", "content": f'''Job Description: {job_description}\n\nResume: {resume_text}\n\n
+                    Please compare this preprocessed resume to this preprocessed job description. Provide a match score from 0 to 100, ensuring that scores are spread evenly across the entire range (0-100), and avoid favoring numbers that end in 5 or 0 (e.g. 25, 30, 45). 
+                    For easy scraping please format your response as JSON, with the key to
+                    match score being matchScore.'''},
+                ]
+            )
+            
+            response_text = response.choices[0].message.content
+            logging.debug(response_text)
+            
+            # Extract the JSON response
+            startJsonIndex = response_text.find("{")
+            endJsonIndex = response_text.rfind("}")
+            response_json = json.loads(response_text[startJsonIndex:endJsonIndex+1])
+        
+        logging.info(f"Loading CHATGPT info took {time.time() - t1} seconds")
+        return response_json
+    async def calculate_average_llm_info(job_description: str, resume_text: str):
+        wordnet.ensure_loaded()
+        # Use asyncio to run the synchronous `calculate_llm_info_match_score_only` in separate threads
+        loop = asyncio.get_event_loop()
+
+        # Run 4 instances of calculate_llm_info_match_score_only concurrently using threads
+        tasks = [
+            loop.run_in_executor(None, ResumeComparison.calculate_llm_info, job_description, resume_text),
+            *(loop.run_in_executor(None, ResumeComparison.calculate_llm_info_match_score_only, job_description, resume_text) for _ in range(4))
+        ]
+        
+        # Await all tasks to complete
+        results = await asyncio.gather(*tasks)
+        
+        # Extract the matchScore from each result and calculate the average
+        match_scores = [result["matchScore"] for result in results]
+        average_score = int(sum(match_scores) / len(match_scores))
+        
+        logging.info(f"Average match score: {average_score}")
+        main_dict = results[0]
+        main_dict["matchScore"] = average_score
+        return main_dict
     def get_embedding_comparison_dict(job_description: str, job_id: str, resume: Resume, user_id: str | UUID) -> Dict:
         logging.debug("Loaded job description")
         logging.debug(job_description)
@@ -166,7 +246,8 @@ class ResumeComparison:
         return resume_comparison_data
     def get_resume_comparison_dict(job_description: str, job_id: str, resume: Resume, user_id: str | UUID) -> Dict:
         resume_comparison_data = ResumeComparison.get_embedding_comparison_dict(job_description, job_id, resume, user_id)
-        resume_comparison_data.update(ResumeComparison.calculate_llm_info(job_description, resume.file_text))
+        llm_info = asyncio.run(ResumeComparison.calculate_average_llm_info(job_description, resume.file_text))
+        resume_comparison_data.update(llm_info)
         return resume_comparison_data
     def print_comparisons(job_description, resume, max_num=60):
         job_sentences = ResumeComparison.split_into_sentences(job_description)
