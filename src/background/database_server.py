@@ -33,12 +33,14 @@ from flask import Flask, abort, request, Response, jsonify
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from google.oauth2 import id_token
+import random
 import uuid
 from uuid import UUID
 from dotenv import load_dotenv
 from auth_logic import get_token
 import jwt
 import json
+from mailing import Mailing
 from mysql.connector.errors import IntegrityError
 from auth_logic import decode_user_from_token, token_required
 from job_location_table import JobLocationTable
@@ -51,6 +53,7 @@ from resume_table import ResumeTable
 from user_location_table import UserLocationTable
 from user_preferences_table import UserPreferencesTable
 from keyword_table import KeywordTable
+from email_confirmation_table import EmailConfirmationTable
 from user import UserInvalidData
 from resume_nlp.resume_comparison import ResumeComparison
 from resume_comparison_collection import ResumeComparisonCollection
@@ -543,6 +546,7 @@ class DatabaseServer:
         return json.dumps(return_json)
     #Not the most restful but returns the full list of jobs for a us
     @app.route('/databases/add_user_job', methods=["POST"])
+    @token_required
     def add_user_job():
         #start time
         st = time.time()
@@ -564,6 +568,7 @@ class DatabaseServer:
         return json.dumps(addedJob.to_json())
 
     @app.route('/databases/update_user_job', methods=["POST"])
+    @token_required
     def update_user_job():
         #start time
         st = time.time()
@@ -1044,6 +1049,34 @@ class DatabaseServer:
         relocation_data = asyncio.run(RelocationDataGrabber.get_data(location))
         logging.info(f"=============== END GET RELOCATION DATA TOOK {time.time() - st} seconds =================")
         return json.dumps(relocation_data), 200
+    @app.route('/api/send_email_confirmation', methods=['POST'])
+    def send_email_confirmation():
+        logging.info("=============== BEGIN SEND CONFIRMATION EMAIL =================")
+        logging.info(request.url)
+        email = request.args.get('email')
+        confirmation_code = str(random.randint(0, 999999)).zfill(6)
+        try:
+            Mailing.send_confirmation_email(email, confirmation_code)
+        except:
+            return "Failed to send confirmation code", 400
+        EmailConfirmationTable.add_confirmation_code(email, confirmation_code)
+        logging.info("=============== END SEND CONFIRMATION EMAIL =================")
+        return "success", 200
+    @app.route('/api/evaluate_email_confirmation', methods=['POST'])
+    def evaluate_email_confirmation():
+        logging.info("=============== BEGIN EVALUATE EMAIL CONFIRMATION =================")
+        logging.info(request.url)
+        email = request.args.get('email')
+        confirmation_code = request.args.get('confirmationCode')
+        confirmation_data = EmailConfirmationTable.readConfirmationCode(email)
+        if (not confirmation_data):
+            return "Invalid Email", 400
+        if confirmation_code != confirmation_data["ConfirmationCode"]:
+            return "Invalid Confirmation Code", 401
+        if confirmation_data["CreatedAt"].timestamp() + 600 < time.time():
+            return "Expired Code", 401
+        logging.info("=============== END EVALUATE CONFIRMATION EMAIL =================")
+        return "success", 200
     @app.route('/api/verify_token', methods=['GET'])
     def verify_token():
         logging.debug("=============== BEGIN VERIFY TOKEN =================")

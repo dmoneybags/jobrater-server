@@ -145,3 +145,10 @@ CREATE TABLE KeywordList
 CONSTRAINT UserKeywords_PK PRIMARY KEY (UserIdFk),
 CONSTRAINT UserKeywords_FK FOREIGN KEY (UserIdFk) REFERENCES User(UserId) ON DELETE CASCADE
 );
+CREATE TABLE EmailConfirmation
+(
+    Email VARCHAR(255),
+    ConfirmationCode VARCHAR(6),
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+CONSTRAINT EmailConfirmation_PK PRIMARY KEY (Email)
+);
