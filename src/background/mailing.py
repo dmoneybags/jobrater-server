@@ -31,13 +31,11 @@ class Mailing:
         except ClientError as e:
             print("Error sending email:", e.response['Error']['Message'])
             return None
-    def send_confirmation_email(receiver_email, confirmation_code):
+    def send_confirmation_email(receiver_email, confirmation_code, forgot_password=False):
         subject = "ApplicantIQ Email Confirmation"
-        body_text = f'''
-        Thank you for registering with ApplicantIQ! Here is your 6 digit confirmation code:
-
-        {confirmation_code}
-
-        Return to the browser extension to finish the onboarding.
-        '''
+        body_text: str
+        if forgot_password:
+            body_text =f'''Here is your 6 digit confirmation code: {confirmation_code}'''
+        else:
+            body_text = f'''Thank you for registering with ApplicantIQ! Here is your 6 digit confirmation code: {confirmation_code}'''
         Mailing.send_email(subject, body_text, receiver_email)

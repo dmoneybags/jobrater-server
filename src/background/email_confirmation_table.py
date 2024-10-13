@@ -13,20 +13,22 @@ class EmailConfirmationTable:
     '''
     def __get_new_confirmation_code_query():
         return '''
-            INSERT INTO EmailConfirmation (Email, ConfirmationCode)
-            VALUES (%s, %s)
-            ON DUPLICATE KEY UPDATE 
-                ConfirmationCode = VALUES(ConfirmationCode)'''
+        INSERT INTO EmailConfirmation (Email, ConfirmationCode, ForgotPassword, CreatedAt)
+        VALUES (%s, %s, %s, NOW())
+        ON DUPLICATE KEY UPDATE 
+            ForgotPassword = VALUES(ForgotPassword),
+            ConfirmationCode = VALUES(ConfirmationCode),
+            CreatedAt = NOW()'''
     def __get_read_confirmation_code_query():
         return '''
-            SELECT ConfirmationCode, CreatedAt FROM EmailConfirmation
+            SELECT ConfirmationCode, ForgotPassword, CreatedAt FROM EmailConfirmation
             WHERE Email = %s
         '''
-    def add_confirmation_code(email, confirmation_code):
+    def add_confirmation_code(email, confirmation_code, forgot_password=False):
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
                 query = EmailConfirmationTable.__get_new_confirmation_code_query()
-                values = (email, confirmation_code)
+                values = (email, confirmation_code, forgot_password)
                 cursor.execute(query, values)
                 conn.commit()
         return 0

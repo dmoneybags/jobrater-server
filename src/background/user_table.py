@@ -74,7 +74,19 @@ class UserTable:
         sql query to delete user
     '''
     def __get_delete_user_by_email_query() -> str:
-        return f"DELETE FROM User WHERE Email=%s"
+        return "DELETE FROM User WHERE Email=%s"
+    '''
+    get_reset_password_query
+
+    args:
+        None
+    returns:
+        sql query to reset a users password
+    '''
+    def __get_reset_password_query() -> str:
+        return '''
+        UPDATE USER SET PASSWORD = %s WHERE UserId = %s
+        '''
     '''
     read_user_by_email
 
@@ -159,5 +171,22 @@ class UserTable:
                 query : str = UserTable.__get_delete_user_by_email_query()
                 cursor.execute(query, (email,))
                 logging.info("USER SUCCESSFULLY ADDED")
+                conn.commit()
+        return 0
+    '''
+    reset_user_password
+
+    args:
+        user_id:
+            The id of the user
+        new_password:
+            The users new password
+    '''
+    def reset_user_password(user_id, new_password):
+        with get_connection() as conn:
+            with conn.cursor(dictionary=True) as cursor:
+                query : str = UserTable.__get_reset_password_query()
+                cursor.execute(query, (new_password, str(user_id)))
+                logging.info(f"USER {user_id} PASSWORD SUCCESSFULLY CHANGED")
                 conn.commit()
         return 0

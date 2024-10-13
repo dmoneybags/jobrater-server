@@ -103,8 +103,14 @@ args:
 returns:
     jwt token
 '''
-def get_token(user : User, num_hours : int=148) -> str:
+def get_token(user : User, num_hours : int=148, forgot_password=False) -> tuple[str, int]:
     exp_time : datetime.datetime = datetime.datetime.utcnow() + datetime.timedelta(hours=num_hours)
+    if forgot_password:
+        return jwt.encode({
+            'email': user.email,
+            'exp': int(exp_time.timestamp()),
+            'forgotPassword': True
+        }, SECRET_KEY, algorithm="HS256"), int(exp_time.timestamp())
     return jwt.encode({
         'email': user.email,
         'exp': int(exp_time.timestamp())

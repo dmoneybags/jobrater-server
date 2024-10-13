@@ -1054,12 +1054,19 @@ class DatabaseServer:
         logging.info("=============== BEGIN SEND CONFIRMATION EMAIL =================")
         logging.info(request.url)
         email = request.args.get('email')
+        forgot_password = request.args.get('forgotPassword', type=bool, default=False)
+        if forgot_password:
+            logging.info("Forgot Password is true")
+        if forgot_password:
+            user: User = UserTable.read_user_by_email(email)
+            if not user:
+                return "User not found!", 404
         confirmation_code = str(random.randint(0, 999999)).zfill(6)
+        EmailConfirmationTable.add_confirmation_code(email, confirmation_code, forgot_password=forgot_password)
         try:
-            Mailing.send_confirmation_email(email, confirmation_code)
+            Mailing.send_confirmation_email(email, confirmation_code, forgot_password)
         except:
             return "Failed to send confirmation code", 400
-        EmailConfirmationTable.add_confirmation_code(email, confirmation_code)
         logging.info("=============== END SEND CONFIRMATION EMAIL =================")
         return "success", 200
     @app.route('/api/evaluate_email_confirmation', methods=['POST'])
@@ -1067,15 +1074,53 @@ class DatabaseServer:
         logging.info("=============== BEGIN EVALUATE EMAIL CONFIRMATION =================")
         logging.info(request.url)
         email = request.args.get('email')
+        forgot_password = request.args.get('forgotPassword', type=bool, default=False)
         confirmation_code = request.args.get('confirmationCode')
         confirmation_data = EmailConfirmationTable.readConfirmationCode(email)
+        if forgot_password:
+            if not confirmation_data["ForgotPassword"]:
+                logging.info("Confirmation entry is not marked as forgot password")
+                return "Invalid Confirmation Code", 401
         if (not confirmation_data):
+            logging.error("Couldn't find confirmation data")
             return "Invalid Email", 400
         if confirmation_code != confirmation_data["ConfirmationCode"]:
+            logging.info(f"Confirmation code of {confirmation_code} does not match our code of {confirmation_data["ConfirmationCode"]}")
             return "Invalid Confirmation Code", 401
         if confirmation_data["CreatedAt"].timestamp() + 600 < time.time():
             return "Expired Code", 401
+        if forgot_password:
+            user: User = UserTable.read_user_by_email(email)
+            if not user:
+                logging.error("Couldn't find user")
+                return "Invalid Confirmation Code", 401
+            return str(get_token(user, num_hours=1, forgot_password=True)[0]), 200
         logging.info("=============== END EVALUATE CONFIRMATION EMAIL =================")
+        return "success", 200
+    @app.route('/api/reset_password', methods=['POST'])
+    def reset_password():
+        logging.info("=============== BEGIN RESET PASSWORD =================")
+        logging.info(request.url)
+        token : str = request.headers.get('Authorization')
+        try:
+            payload: Dict[str, any] = jwt.decode(token, os.environ["secret_key"], algorithms=["HS256"])
+        except jwt.ExpiredSignatureError as e:
+            return "Token Expired!", 403
+        except jwt.InvalidTokenError as e:
+            logging.error(f"token: {token}")
+            logging.error("Token is invalid cannot reset password")
+            return "Invalid Token!", 403
+        if not payload.get("forgotPassword", False):
+            logging.error(f"payload: {payload}")
+            logging.error("Token does not specify forgotPassword, cannot reset password")
+            return "Invalid Token!", 403
+        new_password = request.get_json()["newPassword"]
+        if not new_password:
+            return "No password sent", 400
+        email = payload["email"]
+        user = UserTable.read_user_by_email(email)
+        UserTable.reset_user_password(user.user_id, new_password)
+        logging.info("=============== END RESET PASSWORD =================")
         return "success", 200
     @app.route('/api/verify_token', methods=['GET'])
     def verify_token():

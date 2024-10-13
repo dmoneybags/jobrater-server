@@ -149,6 +149,7 @@ CREATE TABLE EmailConfirmation
 (
     Email VARCHAR(255),
     ConfirmationCode VARCHAR(6),
+    ForgotPassword BOOLEAN DEFAULT FALSE,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 CONSTRAINT EmailConfirmation_PK PRIMARY KEY (Email)
 );
