@@ -1,36 +1,26 @@
-import boto3
-from botocore.exceptions import ClientError
+import requests
+import os
 import random
+import logging
 
 class Mailing:
     domain = "applicantiq.org"
     info_email_address = "info@" + domain
-    region = "us-west-1"
+    mailgun_url = "https://api.mailgun.net/v3/applicantiq.org/messages"
     def send_email(subject, body_text, receiver_email, sender_email=info_email_address):
-        ses_client = boto3.client('ses', region_name=Mailing.region)
-
-        try:
-            response = ses_client.send_email(
-                Source=sender_email,
-                Destination={
-                    'ToAddresses': [receiver_email],
-                },
-                Message={
-                    'Subject': {
-                        'Data': subject,
-                    },
-                    'Body': {
-                        'Text': {
-                            'Data': body_text,
-                        },
-                    },
-                }
-            )
-            print("Email sent! Message ID:", response['MessageId'])
-            return response['MessageId']
-        except ClientError as e:
-            print("Error sending email:", e.response['Error']['Message'])
-            return None
+        response = requests.post(
+  		Mailing.mailgun_url,
+  		auth=("api", os.environ.get("MAILGUN_API_KEY")),
+  		data={"from": f"ApplicantIQ <{sender_email}>",
+  			"to": [receiver_email],
+  			"subject": subject,
+  			"text": body_text})
+        logging.info("Sent request to send email")
+        logging.info("Status Code:")
+        logging.info(response.status_code)  # HTTP status code
+        logging.info("Response Text:")
+        logging.info(response.text)
+        logging.info(os.environ.get("MAILGUN_API_KEY"))   
     def send_confirmation_email(receiver_email, confirmation_code, forgot_password=False):
         subject = "ApplicantIQ Email Confirmation"
         body_text: str
