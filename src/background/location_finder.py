@@ -17,12 +17,12 @@ class LocationFinder:
     base_url : str = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
 
     def get_next_monday_8am_timestamp() -> int:
-        """Returns the Unix timestamp for the next available Monday at 7:00 AM, at least a week away."""
+        """Returns the Unix timestamp for the next available Monday at 7:00 AM, at least a day away."""
         # Get current local time
         now = datetime.now()
 
         # Calculate the number of days until the next Monday
-        days_until_monday = (7 - now.weekday()) % 7  # At least 7 days away
+        days_until_monday = (7 - now.weekday()) % 7 + 1  # At least 7 days away
 
         # Create the timestamp for the next Monday at 7:00 AM
         next_monday_8am = now + timedelta(days=days_until_monday)
@@ -35,12 +35,12 @@ class LocationFinder:
         return unix_timestamp
 
     def get_next_monday_5pm_timestamp() -> int:
-        """Returns the Unix timestamp for the next available Monday at 5:00 PM, at least a week away."""
+        """Returns the Unix timestamp for the next available Monday at 5:00 PM, at least a day away."""
         # Get current local time
         now = datetime.now()
 
         # Calculate the number of days until the next Monday
-        days_until_monday = (7 - now.weekday()) % 7 # At least 7 days away
+        days_until_monday = (7 - now.weekday()) % 7 + 1 # At least 7 days away
 
         # Create the timestamp for the next Monday at 5:00 PM
         next_monday_5pm = now + timedelta(days=days_until_monday)
