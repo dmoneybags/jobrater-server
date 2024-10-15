@@ -39,7 +39,10 @@ class UserPreferencesTable:
     '''
     def __get_read_user_preferences_query() -> str:
         return """
-            SELECT * FROM UserPreferences WHERE UserIdFk = %s
+            SELECT * FROM UserPreferences 
+            LEFT JOIN KeywordList
+            ON UserPreferences.UserIdFk = KeywordList.UserIdFk
+            WHERE UserPreferences.UserIdFk = %s 
         """
     '''
     __get_update_user_preferences_query

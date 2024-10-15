@@ -307,6 +307,7 @@ class DatabaseServer:
             logging.debug("=============== RECIEVED JOB JSON OF =========== \n\n")
             logging.debug(json.dumps(job_json, indent=4))
             company_name: str = job_json["company"]["companyName"]
+            add_user_job = request.args.get("addUserJob", type=bool, default=False)
             logging.info("CHECKING IF WE NEED TO SCRAPE GLASSDOOR")
             if (not CompanyTable.read_company_by_id(company_name) and CANSCRAPEGLASSDOOR and not message["noCompanies"]):
                 if (not message["gdPageSource"]):
@@ -354,7 +355,7 @@ class DatabaseServer:
         #we complete the jobs data before returning it to the client
         #NOTE: Needs to be acid
         try:
-            completeJob: Job = JobTable.add_job_with_foreign_keys(job, user_id)
+            completeJob: Job = JobTable.add_job_with_foreign_keys(job, user_id, add_user_job=add_user_job)
         except DuplicateUserJob:
             abort(409) 
         assert(completeJob.company is not None)

@@ -170,7 +170,7 @@ class UserTable:
             with conn.cursor(dictionary=True) as cursor:
                 query : str = UserTable.__get_delete_user_by_email_query()
                 cursor.execute(query, (email,))
-                logging.info("USER SUCCESSFULLY ADDED")
+                logging.info("USER SUCCESSFULLY DELETED")
                 conn.commit()
         return 0
     '''
