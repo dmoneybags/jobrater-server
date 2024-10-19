@@ -15,7 +15,7 @@ CONSTRAINT User_PK PRIMARY KEY (UserId)
 );
 CREATE TABLE Company
 (
-    CompanyName VARCHAR(50) NOT NULL UNIQUE,
+    CompanyName VARCHAR(255) NOT NULL UNIQUE,
     BusinessOutlookRating DECIMAL(3, 2),
     CareerOpportunitiesRating DECIMAL(2, 1),
     CeoRating DECIMAL(3, 2),
@@ -36,8 +36,8 @@ CREATE TABLE Job
     JobId VARCHAR(10) NOT NULL,
     Applicants TINYINT,
     CareerStage VARCHAR(20),
-    Job VARCHAR(100),
-    Company VARCHAR(50) NOT NULL,
+    Job VARCHAR(255),
+    Company VARCHAR(255) NOT NULL,
     Description LONGBLOB,
     -- uuid to keywords, one to many
     PaymentBase DECIMAL(9, 2),
@@ -67,11 +67,11 @@ CREATE TABLE JobLocation
 (
     QueryStr VARCHAR(70),
     JobIdFK VARCHAR(10),
-    AddressStr VARCHAR(60),
-    City VARCHAR(30),
-    ZipCode VARCHAR(6),
+    AddressStr VARCHAR(255),
+    City VARCHAR(255),
+    ZipCode VARCHAR(255),
     -- to be safe
-    StateCode VARCHAR(10),
+    StateCode VARCHAR(255),
     Latitude DECIMAL(10,7) NOT NULL,
     Longitude DECIMAL(10,7) NOT NULL,
 CONSTRAINT JobLocation_PK PRIMARY KEY (QueryStr),
@@ -80,10 +80,10 @@ CONSTRAINT JobLocation_FK1 FOREIGN KEY (JobIdFK) REFERENCES Job(JobId) ON DELETE
 CREATE TABLE UserLocation
 (
     UserIdFk VARCHAR(36),
-    AddressStr VARCHAR(60),
-    City VARCHAR(30),
-    ZipCode VARCHAR(6),
-    StateCode VARCHAR(2),
+    AddressStr VARCHAR(255),
+    City VARCHAR(255),
+    ZipCode VARCHAR(255),
+    StateCode VARCHAR(255),
     Latitude DECIMAL(5,2) NOT NULL,
     Longitude DECIMAL(5,2) NOT NULL,
 CONSTRAINT UserLocation_PK PRIMARY KEY (UserIdFk),

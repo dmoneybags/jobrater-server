@@ -311,6 +311,7 @@ class DatabaseServer:
             logging.info("CHECKING IF WE NEED TO SCRAPE GLASSDOOR")
             if (not CompanyTable.read_company_by_id(company_name) and CANSCRAPEGLASSDOOR and not message["noCompanies"]):
                 if (not message["gdPageSource"]):
+                    '''
                     t1 = time.time()
                     logging.info("RETRIEVING COMPANY FROM GLASSDOOR")
                     loop = asyncio.new_event_loop()
@@ -328,6 +329,8 @@ class DatabaseServer:
                     job_json["company"] = company.to_json()
                     t2 = time.time()
                     logging.info("Scraping glassdoor took: " + str(t2 - t1) + " seconds")
+                    '''
+                    job_json["company"] = Company(company_name, 0, 0, 0, 0, 0, 0, 0, 0, 0, None).to_json()
                 else:
                     logging.info("CLIENT SENT SOURCE")
                     company_data = glassdoor_scraper.get_company_from_page_source(message["gdPageSource"], message["gdUrl"])
@@ -501,6 +504,9 @@ class DatabaseServer:
         logging.info("Recieved message to read company: " + company)
         company : Company | None = CompanyTable.read_company_by_id(company)
         if not company:
+            abort(404)
+        #Symbolic empty company
+        if company.overall_rating < 0.1:
             abort(404)
         return company.to_json()
     #
