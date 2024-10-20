@@ -64,9 +64,11 @@ from job import Job
 from user import User
 from resume import Resume
 from location import Location
+from subcription import Subscription
 from typing import Dict
 import glassdoor_scraper
 from helper_functions import HelperFunctions
+import stripe
 import sys
 import os
 import traceback
@@ -88,10 +90,14 @@ bcrypt = Bcrypt(app)
 IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
 HOST="0.0.0.0" if IS_PRODUCTION else "127.0.0.1"
 PORT=int(os.environ.get("PORT", 5001))
+WEBSITE_URL = "https://applicantiq.org" if os.environ["SERVER_ENVIRONMENT"] == "production" else "http://localhost:8080"
 
 CANSCRAPEGLASSDOOR: bool = True
 MAPBOXKEY: str = os.environ["MAPBOX_KEY"]
 API_KEY : str = os.environ["GOOGLE_API_KEY"]
+STRIPE_TEST_API_KEY : str = os.environ["STRIPE_TEST_KEY_PRIVATE"]
+
+stripe.api_key = STRIPE_TEST_API_KEY
 
 ADDUSERJOBBYDEFAULT = False
 
@@ -856,6 +862,13 @@ class DatabaseServer:
         #wrap in try catch
         logging.info("=============== END UPDATE RESUME =================")
         return json.dumps(ResumeTable.update_resume_by_id(resume_id, user.user_id, update_json).to_json())
+    #############################################################################################
+    #
+    #
+    # Resume Comparison Routes
+    #
+    #
+    #############################################################################################
     '''
     compare_resumes
 
@@ -998,6 +1011,13 @@ class DatabaseServer:
         del resume_comparison_data["_id"]
         logging.info(f"=============== END COMPARE RESUME BY IDS TOOK {time.time() - st} seconds =================")
         return json.dumps(resume_comparison_data)
+    ##################################################################################################
+    #
+    #
+    # LOCATION ROUTES
+    #
+    #
+    #################################################################################################
     @app.route('/api/verify_address', methods=['GET'])
     def verify_address():
         logging.info("=============== BEGIN VERIFY ADDRESS =================")
@@ -1056,6 +1076,13 @@ class DatabaseServer:
         relocation_data = asyncio.run(RelocationDataGrabber.get_data(location))
         logging.info(f"=============== END GET RELOCATION DATA TOOK {time.time() - st} seconds =================")
         return json.dumps(relocation_data), 200
+    ##################################################################################################
+    #
+    #
+    # EMAIL CONFIRMATION ROUTES
+    #
+    #
+    #################################################################################################
     @app.route('/api/send_email_confirmation', methods=['POST'])
     def send_email_confirmation():
         logging.info("=============== BEGIN SEND CONFIRMATION EMAIL =================")
@@ -1104,6 +1131,13 @@ class DatabaseServer:
             return str(get_token(user, num_hours=1, forgot_password=True)[0]), 200
         logging.info("=============== END EVALUATE CONFIRMATION EMAIL =================")
         return "success", 200
+    ##################################################################################################
+    #
+    #
+    # REST PW
+    #
+    #
+    #################################################################################################
     @app.route('/api/reset_password', methods=['POST'])
     def reset_password():
         logging.info("=============== BEGIN RESET PASSWORD =================")
@@ -1129,6 +1163,13 @@ class DatabaseServer:
         UserTable.reset_user_password(user.user_id, new_password)
         logging.info("=============== END RESET PASSWORD =================")
         return "success", 200
+    ##################################################################################################
+    #
+    #
+    # VERIFY TOKEN
+    #
+    #
+    #################################################################################################
     @app.route('/api/verify_token', methods=['GET'])
     def verify_token():
         logging.debug("=============== BEGIN VERIFY TOKEN =================")
@@ -1143,6 +1184,51 @@ class DatabaseServer:
                 return "NO_AUTH", 200
         except:
             return "NO_AUTH", 200
+    #################################################################################################
+    #
+    #
+    # STRIPE ROUTES
+    #
+    #
+    #################################################################################################
+    @app.route('/payment/create-checkout-session', methods=['POST'])
+    def create_checkout_session():
+        logging.info("=============== BEGIN CREATE CHECKOUT SESSION =================")
+        logging.info(request.url)
+        subscription_type: str = request.args.get("subscriptionType", default=None)
+        discount_code: str = request.args.get("discount", default=None)
+        if not subscription_type:
+            logging.info("Did not load subscription type aborting")
+            abort(400)
+        try:
+            subsciption = Subscription(subscription_type, discount_code=discount_code)
+        except ValueError:
+            logging.info("Did not subscription object aborting")
+            abort(400)
+        logging.info("Loaded subscription")
+        logging.info(subsciption.to_line_item())
+        try:
+            session = stripe.checkout.Session.create(
+                ui_mode = 'embedded',
+                line_items=[
+                    subsciption.to_line_item(),
+                ],
+                mode='subscription',
+                return_url=WEBSITE_URL + '/completedPayment?session_id={CHECKOUT_SESSION_ID}',
+                automatic_tax={'enabled': True},
+            )
+        except Exception as e:
+            return str(e)
+
+        return jsonify(clientSecret=session.client_secret)
+    @app.route('/payment/session-status', methods=['GET'])
+    def session_status():
+        logging.info("=============== BEGIN GET CHECKOUT SESSION =================")
+        logging.info(request.url)
+        session = stripe.checkout.Session.retrieve(request.args.get('session_id'))
+        logging.info(json.dumps(session, indent=2))
+        return jsonify(status=session.status, customer_email=session.customer_details.email, created_at=session.created)
+    #################################################################################################
     def shutdown():
         logging.critical("Handling database server shutdown")
         HelperFunctions.handle_sigterm("database_server")

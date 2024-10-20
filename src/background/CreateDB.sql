@@ -13,6 +13,22 @@ CREATE TABLE User (
     Salt VARCHAR(50),
 CONSTRAINT User_PK PRIMARY KEY (UserId)
 );
+CREATE TABLE UserSubscription
+(
+    SubscriptionId VARCHAR(255) NOT NULL UNIQUE,
+    PriceId VARCHAR(255) NOT NULL UNIQUE,
+    UserId VARCHAR(36) NOT NULL,
+    SubscriptionType VARCHAR(50) NOT NULL,
+    StripeCustomerId VARCHAR(255) NOT NULL,
+    StripeSubscriptionId VARCHAR(255) NOT NULL,
+    Status VARCHAR(50) NOT NULL,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CurrentPeriodEnd TIMESTAMP,
+    CanceledAt TIMESTAMP,
+    IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+CONSTRAINT UserSubscription_PK PRIMARY KEY (SubscriptionId),
+CONSTRAINT UserSubscription_FK FOREIGN KEY (UserId) REFERENCES User(UserId) ON DELETE CASCADE
+);
 CREATE TABLE Company
 (
     CompanyName VARCHAR(255) NOT NULL UNIQUE,
