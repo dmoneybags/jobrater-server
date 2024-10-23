@@ -1259,6 +1259,7 @@ class DatabaseServer:
             userSubscription.stripe_subscription_id,
             cancel_at_period_end=True,
         )
+        UserSubscriptionTable.cancel(userSubscription.stripe_subscription_id)
         return "success", 200
     @app.route('/payment/fulfill', methods=['POST'])
     def fulfill_subscription():
@@ -1323,7 +1324,6 @@ class DatabaseServer:
                 stripe_subscription_id = event['data']['object']['id']
                 user_subscription: UserSubscription = UserSubscriptionTable.read_subscription_by_stripe_sub_id(stripe_subscription_id)
                 user: User = UserTable.read_user_by_id(str(user_subscription.user_id))
-                UserSubscriptionTable.cancel(stripe_subscription_id)
                 Mailing.send_html_email("We're sorry to see you go!", Mailing.get_html_from_file("canceled"), user.email)
             except RuntimeError as e:
                 logging.error(e)
