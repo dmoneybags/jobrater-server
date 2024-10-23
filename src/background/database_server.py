@@ -1236,7 +1236,7 @@ class DatabaseServer:
         event = None
         try:
             event = stripe.Webhook.construct_event(
-                payload, sig_header, STRIPE_WEB_HOOK_KEY
+                payload, sig_header, "whsec_evfHGnzUhsaV3xjL6ohPVWPHftHOAX07"
             )
             logging.info(event['type'])
         except ValueError as e:
@@ -1272,7 +1272,7 @@ class DatabaseServer:
         event = None
         try:
             event = stripe.Webhook.construct_event(
-                payload, sig_header, STRIPE_WEB_HOOK_KEY
+                payload, sig_header, "whsec_nUNqJW7gXbN6ycg0CsnAkqRHk8gcSmq1"
             )
             logging.info(event['type'])
         except ValueError as e:
@@ -1310,7 +1310,7 @@ class DatabaseServer:
         event = None
         try:
             event = stripe.Webhook.construct_event(
-                payload, sig_header, STRIPE_WEB_HOOK_KEY
+                payload, sig_header, "whsec_iBY0nyPiQHJhcMxYR94CyhWz83nyIknU"
             )
             logging.info(event['type'])
         except ValueError as e:
