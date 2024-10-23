@@ -41,7 +41,6 @@ from auth_logic import get_token
 import jwt
 import json
 from mailing import Mailing
-from mysql.connector.errors import IntegrityError
 from auth_logic import decode_user_from_token, token_required
 from job_location_table import JobLocationTable
 from user_job_table import UserJobTable
@@ -54,6 +53,7 @@ from user_location_table import UserLocationTable
 from user_preferences_table import UserPreferencesTable
 from keyword_table import KeywordTable
 from email_confirmation_table import EmailConfirmationTable
+from user_subscription_table import UserSubscriptionTable, UserSubscription
 from user import UserInvalidData
 from resume_nlp.resume_comparison import ResumeComparison
 from resume_comparison_collection import ResumeComparisonCollection
@@ -96,6 +96,8 @@ CANSCRAPEGLASSDOOR: bool = True
 MAPBOXKEY: str = os.environ["MAPBOX_KEY"]
 API_KEY : str = os.environ["GOOGLE_API_KEY"]
 STRIPE_TEST_API_KEY : str = os.environ["STRIPE_TEST_KEY_PRIVATE"]
+
+STRIPE_WEB_HOOK_KEY : str = os.environ["STRIPE_FULFILL_ORDER_KEY"] if os.environ["SERVER_ENVIRONMENT"] == "production" else "whsec_491f33e0f3fcf1aa7f527373994c9f3768c838207208932e026825aaedb105ac"
 
 stripe.api_key = STRIPE_TEST_API_KEY
 
@@ -272,6 +274,8 @@ class DatabaseServer:
 
         logging.info("Setting userId to " + user_id)
         logging.info("Setting token to " + token)
+
+        Mailing.send_html_email("You're signed up!", Mailing.get_html_from_file("signup"), user.email)
 
         logging.info(f"============== END REQUEST TO REGISTER TOOK {time.time() - st} seconds ================")
         return jsonify({'token': token, 'userId': user_id, 'expirationDate': expiration_date})
@@ -1103,6 +1107,7 @@ class DatabaseServer:
             return "Failed to send confirmation code", 400
         logging.info("=============== END SEND CONFIRMATION EMAIL =================")
         return "success", 200
+    
     @app.route('/api/evaluate_email_confirmation', methods=['POST'])
     def evaluate_email_confirmation():
         logging.info("=============== BEGIN EVALUATE EMAIL CONFIRMATION =================")
@@ -1163,6 +1168,175 @@ class DatabaseServer:
         UserTable.reset_user_password(user.user_id, new_password)
         logging.info("=============== END RESET PASSWORD =================")
         return "success", 200
+     #################################################################################################
+    #
+    #
+    # STRIPE ROUTES
+    #
+    #
+    #################################################################################################
+    @app.route('/payment/create-checkout-session', methods=['POST'])
+    @token_required
+    def create_checkout_session():
+        logging.info("=============== BEGIN CREATE CHECKOUT SESSION =================")
+        logging.info(request.url)
+        subscription_type: str = request.args.get("subscriptionType", default=None)
+        discount_code: str = request.args.get("discount", default=None)
+        user = decode_user_from_token(request.headers["Authorization"])
+        if not subscription_type:
+            logging.info("Did not load subscription type aborting")
+            abort(400)
+        try:
+            subsciption = Subscription(subscription_type, discount_code=discount_code)
+        except ValueError:
+            logging.info("Did not creaet subscription object aborting")
+            abort(400)
+        cur_subscription: UserSubscription = UserSubscriptionTable.read_subscription(str(user.user_id))
+        if cur_subscription:
+            if cur_subscription.subscription_object.subscription_type == subscription_type and cur_subscription.valid():
+                logging.error("Found valid subscription, not allowing a second checkout")
+                abort(400)
+        logging.info("Loaded subscription")
+        logging.info(subsciption.to_line_item())
+        try:
+            session: stripe.checkout.Session = stripe.checkout.Session.create(
+                ui_mode = 'embedded',
+                line_items=[
+                    subsciption.to_line_item(),
+                ],
+                mode='subscription',
+                return_url=WEBSITE_URL + '/completedPayment?session_id={CHECKOUT_SESSION_ID}',
+                automatic_tax={'enabled': True},
+                metadata={
+                    'token': request.headers["Authorization"],
+                    'subscriptionType': subscription_type
+                }
+            )
+        except Exception as e:
+            return str(e)
+
+        return jsonify(clientSecret=session.client_secret)
+    
+    @app.route('/payment/session-status', methods=['GET'])
+    @token_required
+    def session_status():
+        logging.info("=============== BEGIN GET CHECKOUT SESSION =================")
+        logging.info(request.url)
+        session: stripe.checkout.Session = stripe.checkout.Session.retrieve(request.args.get('session_id'))
+        logging.info(json.dumps(session, indent=2))
+        return jsonify(status=session.status, customer_email=session.customer_details.email, created_at=session.created)
+    
+    @app.route('/payment/fulfill', methods=['POST'])
+    def fulfill_subscription():
+        logging.info("+++++++++++++++++++++++++++ STRIPE WEBHOOK ++++++++++++++++++++++++++++")
+        logging.info("--------------------------- FULFILL PAYMENT --------------------------")
+        logging.info(request.url)
+        payload = request.data
+        sig_header = request.headers.get('Stripe-Signature')
+        event = None
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, STRIPE_WEB_HOOK_KEY
+            )
+            logging.info(event['type'])
+        except ValueError as e:
+            # Invalid payload
+            logging.error("INVALID PAYLOAD")
+            return jsonify({'error': 'Invalid payload'}), 400
+        except stripe.error.SignatureVerificationError as e:
+            # Invalid signature
+            logging.error("INVALID SIGNATURE")
+            return jsonify({'error': 'Invalid signature'}), 400
+
+        if event['type'] in ['checkout.session.completed', 'checkout.session.async_payment_succeeded']:
+            try:
+                user_subscription: UserSubscription = UserSubscriptionTable.fulfill_checkout(event['data']['object']['id'])
+                user: User = UserTable.read_user_by_id(str(user_subscription.user_id))
+                Mailing.send_html_email("You're Officially a Pro", Mailing.get_html_from_file("prosignup"), user.email, variables={"FIRST_NAME": user.first_name})
+            except RuntimeError as e:
+                logging.error(e)
+                logging.error("Payment not recieved")
+                return jsonify({'error': 'Payment not recieved'}), 400
+        else:
+            logging.info("Event type not matched")
+
+        return jsonify({'status': 'success'}), 200
+    
+    @app.route('/payment/cancel_subscription', methods=['POST'])
+    def cencel_subscription():
+        logging.info("+++++++++++++++++++++++++++ STRIPE WEBHOOK ++++++++++++++++++++++++++++")
+        logging.info("--------------------------- CANCEL PAYMENT --------------------------")
+        logging.info(request.url)
+        payload = request.data
+        sig_header = request.headers.get('Stripe-Signature')
+        event = None
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, STRIPE_WEB_HOOK_KEY
+            )
+            logging.info(event['type'])
+        except ValueError as e:
+            # Invalid payload
+            logging.error("INVALID PAYLOAD")
+            return jsonify({'error': 'Invalid payload'}), 400
+        except stripe.error.SignatureVerificationError as e:
+            # Invalid signature
+            logging.error("INVALID SIGNATURE")
+            return jsonify({'error': 'Invalid signature'}), 400
+
+        if event['type'] in ['subscription_schedule.canceled']:
+            try:
+                stripe_subscription_id = event['data']['object']['id']
+                user_subscription: UserSubscription = UserSubscriptionTable.read_subscription_by_stripe_sub_id(stripe_subscription_id)
+                user: User = UserTable.read_user_by_id(str(user_subscription.user_id))
+                UserSubscriptionTable.cancel(stripe_subscription_id)
+                Mailing.send_html_email("We're sorry to see you go!", Mailing.get_html_from_file("canceled"), user.email)
+            except RuntimeError as e:
+                logging.error(e)
+                logging.error("Payment not recieved")
+                return jsonify({'error': 'Payment not recieved'}), 400
+        else:
+            logging.info("Event type not matched")
+
+        return jsonify({'status': 'success'}), 200
+
+    @app.route('/payment/renew_subscription', methods=['POST'])
+    def renew_subscription():
+        logging.info("+++++++++++++++++++++++++++ STRIPE WEBHOOK ++++++++++++++++++++++++++++")
+        logging.info("--------------------------- RENEW PAYMENT --------------------------")
+        logging.info(request.url)
+        payload = request.data
+        sig_header = request.headers.get('Stripe-Signature')
+        event = None
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, STRIPE_WEB_HOOK_KEY
+            )
+            logging.info(event['type'])
+        except ValueError as e:
+            # Invalid payload
+            logging.error("INVALID PAYLOAD")
+            return jsonify({'error': 'Invalid payload'}), 400
+        except stripe.error.SignatureVerificationError as e:
+            # Invalid signature
+            logging.error("INVALID SIGNATURE")
+            return jsonify({'error': 'Invalid signature'}), 400
+        if event['type'] == "invoice.paid":
+            logging.debug(json.dumps(event, indent=2))
+            logging.info("=========== RENEWING SUBSCRIPTION ===========")
+            invoice_data = event['data']['object']
+            logging.info(json.dumps(invoice_data, indent=2))  # This is the invoice object
+            subscription_id = invoice_data.get('subscription')
+            try:
+                new_subscription: UserSubscription = UserSubscriptionTable.renew(subscription_id)
+            except Exception as e:
+                #TO DO: handle this
+                #send email debug etc
+                return jsonify({'error': e}), 400
+            logging.debug(json.dumps(new_subscription.to_json(), indent=2))
+        else:
+            logging.info("Event type not matched")
+        return jsonify({'status': 'success'}), 200
     ##################################################################################################
     #
     #
@@ -1184,50 +1358,6 @@ class DatabaseServer:
                 return "NO_AUTH", 200
         except:
             return "NO_AUTH", 200
-    #################################################################################################
-    #
-    #
-    # STRIPE ROUTES
-    #
-    #
-    #################################################################################################
-    @app.route('/payment/create-checkout-session', methods=['POST'])
-    def create_checkout_session():
-        logging.info("=============== BEGIN CREATE CHECKOUT SESSION =================")
-        logging.info(request.url)
-        subscription_type: str = request.args.get("subscriptionType", default=None)
-        discount_code: str = request.args.get("discount", default=None)
-        if not subscription_type:
-            logging.info("Did not load subscription type aborting")
-            abort(400)
-        try:
-            subsciption = Subscription(subscription_type, discount_code=discount_code)
-        except ValueError:
-            logging.info("Did not subscription object aborting")
-            abort(400)
-        logging.info("Loaded subscription")
-        logging.info(subsciption.to_line_item())
-        try:
-            session = stripe.checkout.Session.create(
-                ui_mode = 'embedded',
-                line_items=[
-                    subsciption.to_line_item(),
-                ],
-                mode='subscription',
-                return_url=WEBSITE_URL + '/completedPayment?session_id={CHECKOUT_SESSION_ID}',
-                automatic_tax={'enabled': True},
-            )
-        except Exception as e:
-            return str(e)
-
-        return jsonify(clientSecret=session.client_secret)
-    @app.route('/payment/session-status', methods=['GET'])
-    def session_status():
-        logging.info("=============== BEGIN GET CHECKOUT SESSION =================")
-        logging.info(request.url)
-        session = stripe.checkout.Session.retrieve(request.args.get('session_id'))
-        logging.info(json.dumps(session, indent=2))
-        return jsonify(status=session.status, customer_email=session.customer_details.email, created_at=session.created)
     #################################################################################################
     def shutdown():
         logging.critical("Handling database server shutdown")

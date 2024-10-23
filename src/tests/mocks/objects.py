@@ -1,3 +1,6 @@
+from user_subscription import UserSubscription
+import datetime
+
 class MockObjects:
     docx_resume_text : str = '''
 Daniel DeMoney
@@ -128,3 +131,5 @@ About the job
  Diversity, Equity, Inclusion & Equal Employment Opportunity at ADP: ADP is committed to an inclusive, diverse and equitable workplace, and is further committed to providing equal employment opportunities regardless of any protected characteristic including: race, color, genetic information, creed, national origin, religion, sex, affectional or sexual orientation, gender identity or expression, lawful alien status, ancestry, age, marital status, protected veteran status or disability. Hiring decisions are based upon ADP’s operating needs, and applicant merit including, but not limited to, qualifications, experience, ability, availability, cooperation, and job performance.
  Ethics at ADP: ADP has a long, proud history of conducting business with the highest ethical standards and full compliance with all applicable laws. We also expect our people to uphold our values with the highest level of integrity and behave in a manner that fosters an honest and respectful workplace. Click https://jobs.adp.com/life-at-adp/ to learn more about ADP’s culture and our full set of values.
 '''
+    user_subscription = UserSubscription(-1, "example_user_id", "pro", 999, "cus_R4b1yi0VscHpbj", "sub_1QCRpLKfLZqN2X3W95FOgsEN", datetime.datetime.fromtimestamp(1729540980),
+                                         datetime.datetime.fromtimestamp(1729627380))

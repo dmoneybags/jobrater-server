@@ -2,7 +2,6 @@
 from collections import OrderedDict
 from database_functions import DatabaseFunctions, get_connection
 import json
-import uuid
 from user import User
 from mysql.connector.cursor import MySQLCursor
 from mysql.connector.connection_cext import CMySQLConnection
@@ -30,6 +29,26 @@ class UserTable:
             LEFT JOIN KeywordList
             ON User.UserId = KeywordList.UserIdFk
             WHERE Email = %s;
+        """
+    '''
+    get_read_user_by_id_query
+
+    args:
+        None
+    returns: 
+        sql query to read a user by id
+    '''
+    def __get_read_user_by_id_query() -> str:
+        return """
+            SELECT *
+            FROM USER
+            LEFT JOIN UserLocation
+            ON User.UserId = UserLocation.UserIdFk
+            LEFT JOIN UserPreferences
+            ON User.UserId = UserPreferences.UserIdFk
+            LEFT JOIN KeywordList
+            ON User.UserId = KeywordList.UserIdFk
+            WHERE UserId = %s;
         """
     '''
     get_read_user_by_googleId_query
@@ -105,7 +124,27 @@ class UserTable:
         if not result:
             logging.info("COULD NOT FIND USER IN DB WITH EMAIL " + email)
             return None
-        logging.info("READ USER WITH EMAIL " + email + " GOT "+ str(result))
+        logging.debug("READ USER WITH EMAIL " + email + " GOT "+ str(result))
+        return User.create_with_sql_row(result)
+    '''
+    read_user_by_email
+
+    args:
+        email: string email of a user
+
+    returns:
+        User with data from sql query
+    '''
+    def read_user_by_id(user_id: str) -> User | None:
+        with get_connection() as conn:
+            with conn.cursor(dictionary=True) as cursor:
+                query: str = UserTable.__get_read_user_by_id_query()
+                cursor.execute(query, (user_id,))
+                result: (Dict[str, RowItemType]) = cursor.fetchone()
+        if not result:
+            logging.info("COULD NOT FIND USER IN DB WITH ID " + user_id)
+            return None
+        logging.debug("READ USER WITH ID " + user_id + " GOT "+ str(result))
         return User.create_with_sql_row(result)
     '''
     read_user_by_googleId

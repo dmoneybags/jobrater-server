@@ -1,0 +1,31 @@
+customers:
+{
+  "id": "cus_R4jrDdMhxOYJkf",
+  "object": "customer",
+  "address": null,
+  "balance": 0,
+  "created": 1729573928,
+  "currency": null,
+  "default_source": null,
+  "delinquent": false,
+  "description": null,
+  "discount": null,
+  "email": "dandemoney@gmail.com",
+  "invoice_prefix": "7D04740D",
+  "invoice_settings": {
+    "custom_fields": null,
+    "default_payment_method": null,
+    "footer": null,
+    "rendering_options": null
+  },
+  "livemode": false,
+  "metadata": {},
+  "name": "Jam Wayne",
+  "next_invoice_sequence": 1,
+  "phone": null,
+  "preferred_locales": [],
+  "shipping": null,
+  "tax_exempt": "none",
+  "test_clock": null
+}
+prices:

@@ -15,13 +15,12 @@ CONSTRAINT User_PK PRIMARY KEY (UserId)
 );
 CREATE TABLE UserSubscription
 (
-    SubscriptionId VARCHAR(255) NOT NULL UNIQUE,
-    PriceId VARCHAR(255) NOT NULL UNIQUE,
+    SubscriptionId INT AUTO_INCREMENT,
     UserId VARCHAR(36) NOT NULL,
+    Price INT NOT NULL,
     SubscriptionType VARCHAR(50) NOT NULL,
     StripeCustomerId VARCHAR(255) NOT NULL,
     StripeSubscriptionId VARCHAR(255) NOT NULL,
-    Status VARCHAR(50) NOT NULL,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CurrentPeriodEnd TIMESTAMP,
     CanceledAt TIMESTAMP,
