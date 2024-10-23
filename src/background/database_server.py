@@ -1015,6 +1015,24 @@ class DatabaseServer:
         del resume_comparison_data["_id"]
         logging.info(f"=============== END COMPARE RESUME BY IDS TOOK {time.time() - st} seconds =================")
         return json.dumps(resume_comparison_data)
+      #################################################################################################
+    #
+    #
+    # SUBSCRIPTION ROUTES
+    #
+    #
+    #################################################################################################
+    @app.route('/databases/get_subscription')
+    @token_required
+    def get_subscription():
+        logging.info("=============== GOT REQUEST TO GET SUBSCRIPTION =================")
+        logging.info(request.url)
+        token : str = request.headers.get('Authorization')
+        user : User | None = decode_user_from_token(token)
+        user_subscription: UserSubscription = UserSubscriptionTable.read_subscription(user.user_id)
+        if not user_subscription:
+            return json.dumps({}), 200
+        return json.dumps(user_subscription.to_json()), 200
     ##################################################################################################
     #
     #
