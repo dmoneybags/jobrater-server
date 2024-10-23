@@ -1015,7 +1015,7 @@ class DatabaseServer:
         del resume_comparison_data["_id"]
         logging.info(f"=============== END COMPARE RESUME BY IDS TOOK {time.time() - st} seconds =================")
         return json.dumps(resume_comparison_data)
-      #################################################################################################
+    ##################################################################################################
     #
     #
     # SUBSCRIPTION ROUTES
@@ -1033,6 +1033,7 @@ class DatabaseServer:
         if not user_subscription:
             return json.dumps({}), 200
         return json.dumps(user_subscription.to_json()), 200
+
     ##################################################################################################
     #
     #
@@ -1157,7 +1158,7 @@ class DatabaseServer:
     ##################################################################################################
     #
     #
-    # REST PW
+    # RESET PW
     #
     #
     #################################################################################################
@@ -1234,7 +1235,7 @@ class DatabaseServer:
             return str(e)
 
         return jsonify(clientSecret=session.client_secret)
-    
+
     @app.route('/payment/session-status', methods=['GET'])
     @token_required
     def session_status():
@@ -1244,6 +1245,21 @@ class DatabaseServer:
         logging.info(json.dumps(session, indent=2))
         return jsonify(status=session.status, customer_email=session.customer_details.email, created_at=session.created)
     
+    @app.route('/payment/send_message_to_cancel', methods=['POST'])
+    @token_required
+    def send_message_to_cancel():
+        logging.info("=============== BEGIN SEND MESSAGE TO CANCEL =================")
+        logging.info(request.url)
+        token : str = request.headers.get('Authorization')
+        user : User | None = decode_user_from_token(token)
+        userSubscription: UserSubscription = UserSubscriptionTable.read_subscription(user.user_id)
+        if not userSubscription:
+            return json.dumps({"error": "No subscription found"}), 404
+        stripe.Subscription.modify(
+            userSubscription.stripe_subscription_id,
+            cancel_at_period_end=True,
+        )
+        return "success", 200
     @app.route('/payment/fulfill', methods=['POST'])
     def fulfill_subscription():
         logging.info("+++++++++++++++++++++++++++ STRIPE WEBHOOK ++++++++++++++++++++++++++++")
@@ -1281,7 +1297,7 @@ class DatabaseServer:
         return jsonify({'status': 'success'}), 200
     
     @app.route('/payment/cancel_subscription', methods=['POST'])
-    def cencel_subscription():
+    def cancel_subscription():
         logging.info("+++++++++++++++++++++++++++ STRIPE WEBHOOK ++++++++++++++++++++++++++++")
         logging.info("--------------------------- CANCEL PAYMENT --------------------------")
         logging.info(request.url)
@@ -1311,8 +1327,7 @@ class DatabaseServer:
                 Mailing.send_html_email("We're sorry to see you go!", Mailing.get_html_from_file("canceled"), user.email)
             except RuntimeError as e:
                 logging.error(e)
-                logging.error("Payment not recieved")
-                return jsonify({'error': 'Payment not recieved'}), 400
+                return jsonify({'error': 'Could not cancel subscription'}), 500
         else:
             logging.info("Event type not matched")
 
