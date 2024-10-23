@@ -1319,7 +1319,7 @@ class DatabaseServer:
             logging.error("INVALID SIGNATURE")
             return jsonify({'error': 'Invalid signature'}), 400
 
-        if event['type'] in ['subscription_schedule.canceled']:
+        if event['type'] in ['customer.subscription.deleted']:
             try:
                 stripe_subscription_id = event['data']['object']['id']
                 user_subscription: UserSubscription = UserSubscriptionTable.read_subscription_by_stripe_sub_id(stripe_subscription_id)
