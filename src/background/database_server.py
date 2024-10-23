@@ -1022,7 +1022,7 @@ class DatabaseServer:
     #
     #
     #################################################################################################
-    @app.route('/databases/get_subscription')
+    @app.route('/databases/get_subscription', methods=['GET'])
     @token_required
     def get_subscription():
         logging.info("=============== GOT REQUEST TO GET SUBSCRIPTION =================")
