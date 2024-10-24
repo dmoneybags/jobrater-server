@@ -659,6 +659,15 @@ class DatabaseServer:
         user_email : str = user.email
         if not UserTable.read_user_by_email(user_email):
             return json.dumps({'message': 'User not in db'}), 401
+        
+        userSubscription: UserSubscription = UserSubscriptionTable.read_subscription(user.user_id)
+
+        if userSubscription and userSubscription.is_active:
+            stripe.Subscription.modify(
+                userSubscription.stripe_subscription_id,
+                cancel_at_period_end=True,
+            )
+
         UserTable.delete_user_by_email(user_email)
         logging.info("=============== END DELETE USER =================")
         return 'success', 200
@@ -1348,6 +1357,7 @@ class DatabaseServer:
                 user_subscription: UserSubscription = UserSubscriptionTable.read_subscription_by_stripe_sub_id(stripe_subscription_id)
                 user: User = UserTable.read_user_by_id(str(user_subscription.user_id))
                 Mailing.send_html_email("We're sorry to see you go!", Mailing.get_html_from_file("canceled"), user.email)
+                ResumeTable.clear_resumes_after_subscription_end(user.user_id)
             except RuntimeError as e:
                 logging.error(e)
                 return jsonify({'error': 'Could not cancel subscription'}), 500

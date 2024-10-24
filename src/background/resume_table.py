@@ -55,6 +55,20 @@ class ResumeTable:
             WHERE UserId = %s
         """
     '''
+    __get_resume_to_keep
+
+    Called when a user goes from pro to basic subscription
+
+    deletes every resume except for this one
+    '''
+    def __get_resume_to_keep(resumes: list[Resume]) -> Resume:
+        for resume in resumes:
+            if resume.isDefault:
+                return resume
+        sorted_resumes = sorted(resumes, key=lambda r: r.upload_date, reverse=True)
+        #Most recent resume
+        return sorted_resumes[0]
+    '''
     add_resume
 
     adds a resume to the db
@@ -165,3 +179,11 @@ class ResumeTable:
                 cursor.execute(query, (*update_dict.values(), resume_id))
                 conn.commit()
         return ResumeTable.read_resume_by_id(resume_id)
+    def clear_resumes_after_subscription_end(user_id: str):
+        resumes: list[Resume] = ResumeTable.read_user_resumes(user_id)
+        if len(resumes) < 2:
+            return
+        resume_to_keep = ResumeTable.__get_resume_to_keep(resumes)
+        for resume in resumes:
+            if resume.id != resume_to_keep.id:
+                ResumeTable.delete_resume(resume.id)
