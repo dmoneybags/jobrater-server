@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'mocks')
 import json
 import asyncio
 from auth_logic import decode_user_from_token, get_token
+from datetime import timedelta
 from uuid import uuid1
 from user_table import UserTable
 from user import User
@@ -15,6 +16,7 @@ from job import Job
 from job_table import JobTable
 from user_job_table import UserJobTable
 from resume_table import Resume, ResumeTable
+from user_free_data_table import UserFreeDataTable
 from objects import MockObjects
 from user_preferences import UserPreferences
 from user_subscription import UserSubscription
@@ -24,7 +26,7 @@ from user_subscription_table import UserSubscriptionTable
 from resume_comparison_collection import ResumeComparisonCollection
 from resume_nlp.resume_comparison import ResumeComparison
 from relocation_data_grabber import RelocationDataGrabber
-from errors import DuplicateUserJob
+from errors import DuplicateUserJob, NoFreeRatingsLeft
 
 
 #TESTS JUST DB CODE, NO SERVERS
@@ -330,10 +332,45 @@ def user_subscription_tests(user_id):
         assert(True)
     except:
         print("Successfully avoided a double add")
-    print("Testing renew")
-    UserSubscriptionTable.renew(user_subscription.stripe_subscription_id)
-    UserSubscriptionTable.read_subscription(user_subscription.user_id)
-    assert()
+
+def user_free_data_tests(user_id):
+    print("TESTING USER FREE DATA TABLE")
+    print("Testing adding and reading back free data")
+    UserFreeDataTable.add_free_data(user_id)
+    free_data = UserFreeDataTable.read_free_data(user_id)
+    assert(free_data["FreeRatingsLeft"] == 3)
+    print("Test Suceeded")
+    print("Testing updating the free data")
+    time_last_updated = free_data["LastReload"] - timedelta(days=2)
+    UserFreeDataTable.update_free_data(user_id, 0, time_last_updated)
+    reread_free_data = UserFreeDataTable.read_free_data(user_id)
+    assert(reread_free_data["LastReload"] == time_last_updated)
+    assert(reread_free_data["FreeRatingsLeft"] == 0)
+    print("Test Suceeded")
+    print("Testing getting free ratings left")
+    reread_free_data = UserFreeDataTable.get_free_resume_info(user_id)
+    assert(reread_free_data["LastReload"] > time_last_updated)
+    assert(reread_free_data["FreeRatingsLeft"] == 3)
+    print("Test Suceeded")
+    print("Testing decrementing a resume rating")
+    time_last_updated = free_data["LastReload"] - timedelta(days=2)
+    UserFreeDataTable.update_free_data(user_id, 0, time_last_updated)
+    UserFreeDataTable.use_free_resume_rating(user_id)
+    reread_free_data = UserFreeDataTable.get_free_resume_info(user_id)
+    assert(reread_free_data["LastReload"] > time_last_updated)
+    assert(reread_free_data["FreeRatingsLeft"] == 2)
+    print("Test Suceeded")
+    print("Testing decrementing a resume rating when there is none left")
+    time_last_updated = free_data["LastReload"]
+    UserFreeDataTable.update_free_data(user_id, 0, time_last_updated)
+    try:
+        UserFreeDataTable.use_free_resume_rating(user_id)
+        assert(False)
+    except NoFreeRatingsLeft:
+        pass
+    print("Test Suceeded")
+
+
 
 if __name__ == "__main__":
     relocation_grabber_tests()
@@ -345,6 +382,8 @@ if __name__ == "__main__":
     user_preferences_tests(user_id)
     resume_comparison_tests(user_id)
     user_subscription_tests(user_id)
+    user_free_data_tests(user_id)
+
 
 
     

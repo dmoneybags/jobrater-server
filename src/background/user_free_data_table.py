@@ -61,5 +61,5 @@ class UserFreeDataTable:
             free_data["LastReload"] = datetime.datetime.now()
             free_data["FreeRatingsLeft"] = 3
             UserFreeDataTable.update_free_data(userId, free_data["FreeRatingsLeft"], free_data["LastReload"])
-            return 
+            return UserFreeDataTable.read_free_data(userId)
         return free_data
