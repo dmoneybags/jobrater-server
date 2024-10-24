@@ -68,6 +68,6 @@ class UserFreeDataTable:
         
         created_at: datetime = user_free_data["CreatedAt"]
 
-        one_week_ago = datetime.now() - timedelta(days=7)
+        one_week_ago = datetime.datetime.now() - timedelta(days=7)
 
         return created_at >= one_week_ago
