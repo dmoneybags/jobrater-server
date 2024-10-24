@@ -1033,7 +1033,6 @@ class DatabaseServer:
         if not user_subscription:
             return json.dumps({}), 200
         return json.dumps(user_subscription.to_json()), 200
-
     ##################################################################################################
     #
     #
@@ -1187,7 +1186,7 @@ class DatabaseServer:
         UserTable.reset_user_password(user.user_id, new_password)
         logging.info("=============== END RESET PASSWORD =================")
         return "success", 200
-     #################################################################################################
+    ##################################################################################################
     #
     #
     # STRIPE ROUTES
@@ -1260,6 +1259,22 @@ class DatabaseServer:
             cancel_at_period_end=True,
         )
         UserSubscriptionTable.cancel(userSubscription.stripe_subscription_id)
+        return "success", 200
+    @app.route('/payment/send_message_to_restart', methods=['POST'])
+    @token_required
+    def send_message_to_restart():
+        logging.info("=============== BEGIN SEND MESSAGE TO RESTART SUBSCRIPTION =================")
+        logging.info(request.url)
+        token : str = request.headers.get('Authorization')
+        user : User | None = decode_user_from_token(token)
+        userSubscription: UserSubscription = UserSubscriptionTable.read_subscription(user.user_id)
+        if not userSubscription:
+            return json.dumps({"error": "No subscription found"}), 404
+        stripe.Subscription.modify(
+            userSubscription.stripe_subscription_id,
+            cancel_at_period_end=False,
+        )
+        UserSubscriptionTable.restart(userSubscription.stripe_subscription_id)
         return "success", 200
     @app.route('/payment/fulfill', methods=['POST'])
     def fulfill_subscription():
