@@ -4,9 +4,9 @@ from typing import Dict
 class Subscription:
     PRO_SUBSCRIPTION_PRICE = 999
     PRO_SUBSCRIPTION_BASE_PRICE_TEST_ID = "price_1QBsnwKfLZqN2X3WBnykVH85"
-    PRO_SUBSCRIPTION_BASE_PRICE_ID = "price_1QBmFMKfLZqN2X3WL0H7dHm4" if os.environ["SERVER_ENVIRONMENT"] == "production" else PRO_SUBSCRIPTION_BASE_PRICE_TEST_ID
+    PRO_SUBSCRIPTION_BASE_PRICE_ID = "price_1QBmFMKfLZqN2X3WL0H7dHm4" if os.environ["STRIPE_ENVIRONMENT"] == "production" else PRO_SUBSCRIPTION_BASE_PRICE_TEST_ID
     PRO_SUBCRIPTION_TEST_ID = "prod_R40ppWMFQ1pXtu"
-    PRO_SUBSCRIPTION_ID = "prod_R3u3Q6oY9Z7PsZ" if os.environ["SERVER_ENVIRONMENT"] == "production" else PRO_SUBCRIPTION_TEST_ID
+    PRO_SUBSCRIPTION_ID = "prod_R3u3Q6oY9Z7PsZ" if os.environ["STRIPE_ENVIRONMENT"] == "production" else PRO_SUBCRIPTION_TEST_ID
 
     def __init__(self, subscription_type: str, price: int = None, discount_code: str = None) -> None:
         self.subscription_type = subscription_type
