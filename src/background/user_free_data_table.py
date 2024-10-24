@@ -63,3 +63,11 @@ class UserFreeDataTable:
             UserFreeDataTable.update_free_data(userId, free_data["FreeRatingsLeft"], free_data["LastReload"])
             return UserFreeDataTable.read_free_data(userId)
         return free_data
+    def is_discountable(user_id: str) -> bool:
+        user_free_data: Dict = UserFreeDataTable.read_free_data(user_id)
+        
+        created_at: datetime = user_free_data["CreatedAt"]
+
+        one_week_ago = datetime.now() - timedelta(days=7)
+
+        return created_at >= one_week_ago

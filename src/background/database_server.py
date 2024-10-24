@@ -1231,7 +1231,11 @@ class DatabaseServer:
             logging.info("Did not load subscription type aborting")
             abort(400)
         try:
-            subsciption = Subscription(subscription_type, discount_code=discount_code)
+            subsciption: Subscription
+            if UserFreeDataTable.is_discountable(user.user_id):
+                subsciption = Subscription(subscription_type, price=Subscription.PRO_SUBSCRIPTION_DISCOUNTED_PRICE, discount_code=discount_code)
+            else:
+                subsciption = Subscription(subscription_type, discount_code=discount_code)
         except ValueError:
             logging.info("Did not creaet subscription object aborting")
             abort(400)
