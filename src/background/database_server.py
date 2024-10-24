@@ -97,7 +97,15 @@ MAPBOXKEY: str = os.environ["MAPBOX_KEY"]
 API_KEY : str = os.environ["GOOGLE_API_KEY"]
 STRIPE_TEST_API_KEY : str = os.environ["STRIPE_TEST_KEY_PRIVATE"]
 
-STRIPE_WEB_HOOK_KEY : str = os.environ["STRIPE_FULFILL_ORDER_KEY"] if os.environ["SERVER_ENVIRONMENT"] == "production" else "whsec_491f33e0f3fcf1aa7f527373994c9f3768c838207208932e026825aaedb105ac"
+#using get to not cause keyErrors on local machine
+STRIPE_FULFILL_ORDER_KEY : str = os.environ["STRIPE_FULFILL_ORDER_KEY"] if os.environ["STRIPE_ENVIRONMENT"] == "production" else os.environ.get("STRIPE_FULFILL_ORDER_KEY_TEST")
+STRIPE_RENEW_ORDER_KEY : str = os.environ["STRIPE_RENEW_ORDER_KEY"] if os.environ["STRIPE_ENVIRONMENT"] == "production" else os.environ.get("STRIPE_RENEW_ORDER_KEY_TEST")
+STRIPE_CANCEL_ORDER_KEY : str = os.environ["STRIPE_CANCEL_ORDER_KEY"] if os.environ["STRIPE_ENVIRONMENT"] == "production" else os.environ.get("STRIPE_CANCEL_ORDER_KEY_TEST")
+
+if os.environ["SERVER_ENVIRONMENT"] == "development":
+    STRIPE_FULFILL_ORDER_KEY = os.environ["STRIPE_LOCAL_WEBHOOK"]
+    STRIPE_RENEW_ORDER_KEY = os.environ["STRIPE_LOCAL_WEBHOOK"]
+    STRIPE_CANCEL_ORDER_KEY = os.environ["STRIPE_LOCAL_WEBHOOK"]
 
 stripe.api_key = STRIPE_TEST_API_KEY
 
@@ -1286,7 +1294,7 @@ class DatabaseServer:
         event = None
         try:
             event = stripe.Webhook.construct_event(
-                payload, sig_header, "whsec_evfHGnzUhsaV3xjL6ohPVWPHftHOAX07"
+                payload, sig_header, STRIPE_FULFILL_ORDER_KEY
             )
             logging.info(event['type'])
         except ValueError as e:
@@ -1322,7 +1330,7 @@ class DatabaseServer:
         event = None
         try:
             event = stripe.Webhook.construct_event(
-                payload, sig_header, "whsec_nUNqJW7gXbN6ycg0CsnAkqRHk8gcSmq1"
+                payload, sig_header, STRIPE_CANCEL_ORDER_KEY
             )
             logging.info(event['type'])
         except ValueError as e:
@@ -1358,7 +1366,7 @@ class DatabaseServer:
         event = None
         try:
             event = stripe.Webhook.construct_event(
-                payload, sig_header, "whsec_iBY0nyPiQHJhcMxYR94CyhWz83nyIknU"
+                payload, sig_header, STRIPE_RENEW_ORDER_KEY
             )
             logging.info(event['type'])
         except ValueError as e:
