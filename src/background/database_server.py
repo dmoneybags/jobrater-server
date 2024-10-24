@@ -54,6 +54,7 @@ from user_preferences_table import UserPreferencesTable
 from keyword_table import KeywordTable
 from email_confirmation_table import EmailConfirmationTable
 from user_subscription_table import UserSubscriptionTable, UserSubscription
+from user_free_data_table import UserFreeDataTable
 from user import UserInvalidData
 from resume_nlp.resume_comparison import ResumeComparison
 from resume_comparison_collection import ResumeComparisonCollection
@@ -226,7 +227,6 @@ class DatabaseServer:
     returns:
         either http error 
     '''
-    #NOTE: NEEDS TO BE ACID!!!
     @app.route('/register', methods=['POST'])
     def register():
         #start time
@@ -278,6 +278,10 @@ class DatabaseServer:
         else:
             logging.info("USER IS CHOOSING NOT TO ADD LOCATION")
 
+        logging.info("ADDING FREE DATA TO DB")
+        UserFreeDataTable.add_free_data(user_id)
+        logging.info("ADDED FREE DATA TO DB")
+
         token, expiration_date = get_token(user)
 
         logging.info("Setting userId to " + user_id)
@@ -288,12 +292,12 @@ class DatabaseServer:
         logging.info(f"============== END REQUEST TO REGISTER TOOK {time.time() - st} seconds ================")
         return jsonify({'token': token, 'userId': user_id, 'expirationDate': expiration_date})
     #########################################################################################
-
     #
     #
     # JOB METHODS
     #
     #
+    #########################################################################################
     '''
     add_job
 
@@ -491,11 +495,13 @@ class DatabaseServer:
         JobTable.delete_job_by_id(job_id)
         logging.info("=============== END DELETE JOB BY ID =================")
         return 'success', 200
+    ##########################################################################################
     #
     #
     # COMPANY METHODS
     #
     #
+    ##########################################################################################
     #We only give the server an option to read companies,
     #theres no reason for us to make calls to update or delete companies yet
     '''
@@ -787,10 +793,13 @@ class DatabaseServer:
         UserLocationTable.delete_location(user.user_id)
         logging.info("=============== END DELETE USER LOCATION =================")
         return "success", 200
+    ##########################################################################################
+    #
     #
     # RESUME METHODS
     #
     #
+    ##########################################################################################
     '''
     add_resume
 
@@ -1403,6 +1412,21 @@ class DatabaseServer:
         else:
             logging.info("Event type not matched")
         return jsonify({'status': 'success'}), 200
+    ##################################################################################################
+    #
+    #
+    # FREE DATA ROUTES
+    #
+    #
+    #################################################################################################
+    @app.route('/databases/get_free_data', methods=['GET'])
+    @token_required
+    def get_free_data():
+        logging.info("=============== BEGIN GET FREE DATA =================")
+        logging.info(request.url)
+        token : str = request.headers.get('Authorization')
+        user : User | None = decode_user_from_token(token)
+        return jsonify(UserFreeDataTable.get_free_resume_info(user.user_id)), 200
     ##################################################################################################
     #
     #
