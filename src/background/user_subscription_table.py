@@ -120,3 +120,7 @@ class UserSubscriptionTable:
         user_subscription: UserSubscription = UserSubscriptionTable.read_subscription_by_stripe_sub_id(subscription_id)
         user_subscription.is_active = False
         return UserSubscriptionTable.__update_subscription(user_subscription)
+    def restart(subscription_id: str) -> UserSubscription:
+        user_subscription: UserSubscription = UserSubscriptionTable.read_subscription_by_stripe_sub_id(subscription_id)
+        user_subscription.is_active = True
+        return UserSubscriptionTable.__update_subscription(user_subscription)
