@@ -19,6 +19,7 @@ from resume_table import Resume, ResumeTable
 from user_free_data_table import UserFreeDataTable
 from objects import MockObjects
 from user_preferences import UserPreferences
+from subcription import Subscription
 from user_subscription import UserSubscription
 from location import Location
 from user_preferences_table import UserPreferencesTable
@@ -308,6 +309,16 @@ def relocation_grabber_tests():
     #172 N Main St, Wallingford, VT 05773
     location = Location("210 E 46th St", "New York", "10017", "NY", 40.75281, -73.97210)
     asyncio.run(RelocationDataGrabber.get_data(location)) 
+def subscription_tests():
+    print("Testing subscription logic")
+    subscription: Subscription = Subscription("pro")
+    assert(subscription.price == Subscription.PRO_SUBSCRIPTION_PRICE)
+    assert(subscription.price_id == Subscription.PRO_SUBSCRIPTION_BASE_PRICE_TEST_ID)
+    print("Non discounted load test passed")
+    subscription: Subscription = Subscription("pro", price=Subscription.PRO_SUBSCRIPTION_DISCOUNTED_PRICE)
+    assert(subscription.price == Subscription.PRO_SUBSCRIPTION_DISCOUNTED_PRICE)
+    assert(subscription.price_id == Subscription.PRO_SUBSCRIPTION_DISCOUNTED_PRICE_TEST_ID)
+    print("Discounted load test passed")
 def user_subscription_tests(user_id):
     print("TESTING USER SUBSCRIPTION CLASS")
     user_subscription = MockObjects.user_subscription
@@ -371,7 +382,6 @@ def user_free_data_tests(user_id):
     print("Test Suceeded")
 
 
-
 if __name__ == "__main__":
     relocation_grabber_tests()
     user_id = user_tests()
@@ -381,6 +391,7 @@ if __name__ == "__main__":
     resume_tests(user_id)
     user_preferences_tests(user_id)
     resume_comparison_tests(user_id)
+    subscription_tests()
     user_subscription_tests(user_id)
     user_free_data_tests(user_id)
 

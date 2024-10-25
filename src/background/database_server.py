@@ -38,6 +38,7 @@ import uuid
 from uuid import UUID
 from dotenv import load_dotenv
 from auth_logic import get_token
+from payment_decorators import PaymentDecorators
 import jwt
 import json
 from mailing import Mailing
@@ -813,6 +814,7 @@ class DatabaseServer:
         dumped resume we added
     '''
     @app.route('/databases/add_resume', methods=['POST'])
+    @PaymentDecorators.check_subscription_for_resume_upload
     @token_required
     def add_resume():
         st = time.time()
@@ -927,6 +929,7 @@ class DatabaseServer:
     User sends id of resume to compare, we read it from the db, and then compare it
     '''
     @app.route('/databases/compare_resumes_by_id', methods=['POST'])
+    @PaymentDecorators.check_subscription_for_resume_rating
     @token_required
     def compare_resumes_by_id():
         logging.info("=============== BEGIN COMPARE RESUMES BY ID =================")
@@ -1016,6 +1019,7 @@ class DatabaseServer:
         return json.dumps(resume_comparison_data) 
     
     @app.route('/databases/compare_resume_by_ids', methods=['GET'])
+    @PaymentDecorators.check_subscription_for_resume_rating
     @token_required
     def compare_resume_by_ids():
         st = time.time()
@@ -1088,6 +1092,7 @@ class DatabaseServer:
             logging.error("ERROR VERIFYING, GOT KEYERROR TRYING TO CREATE RETURN JSON")
             return "invalid location", 400
     @app.route('/api/directions', methods=['GET'])
+    @PaymentDecorators.pro_subscription_required
     @token_required
     def get_directions():
         logging.info("=============== BEGIN GET DIRECTIONS =================")
@@ -1108,6 +1113,7 @@ class DatabaseServer:
         logging.info("=============== END GET DIRECTIONS =================")
         return json.dumps(responseJson), 200
     @app.route('/api/get_relocation_data', methods=['POST'])
+    @PaymentDecorators.pro_subscription_required
     @token_required
     def get_relocation_data():
         st = time.time()
