@@ -1,13 +1,13 @@
 #(c) 2024 Daniel DeMoney. All rights reserved.
 from flask import request
 import requests
+import asyncio
 import aiohttp
 from typing import Dict
 import os
 from location import Location
 from io import BytesIO
 import json
-import time
 from datetime import datetime, timedelta, timezone
 import logging
 
@@ -73,11 +73,17 @@ class LocationFinder:
             return Location.create_from_google_places_response(data['candidates'][0])
         else:
             return None
-    #Sync because we dont have a reason for it to be async
-    def get_directions(origin_latitude: float, origin_longitude: float, destination_latitude: float, destination_longitude: float, returning=False) -> Dict:
-        # Make a request to Google Directions API
+    async def get_directions(
+        origin_latitude: float, 
+        origin_longitude: float, 
+        destination_latitude: float, 
+        destination_longitude: float, 
+        returning=False
+    ) -> Dict:
+        # Define the base URL for Google Directions API
         directions_url = 'https://maps.googleapis.com/maps/api/directions/json'
-        params = None
+        
+        # Define parameters based on 'returning' flag
         if returning:
             params = {
                 'origin': f"{origin_latitude},{origin_longitude}",
@@ -92,43 +98,78 @@ class LocationFinder:
                 'key': GOOGLE_API_KEY,
                 'departure_time': LocationFinder.get_next_monday_8am_timestamp()
             }
-        response : requests.Response = requests.get(directions_url, params=params)
 
-        data = response.json()
+        async with aiohttp.ClientSession() as session:
+            # Make the request to get directions
+            async with session.get(directions_url, params=params) as response:
+                data = await response.json()
 
-        if data['status'] == 'OK':
-            # Extract the polyline and duration from the response
-            polyline = data['routes'][0]['overview_polyline']['points']
-            arriving_duration = data['routes'][0]['legs'][0]['duration']
-            duration_in_traffic = data['routes'][0]['legs'][0].get('duration_in_traffic', {})
+                if data['status'] == 'OK':
+                    # Extract polyline and duration data
+                    polyline = data['routes'][0]['overview_polyline']['points']
+                    arriving_duration = data['routes'][0]['legs'][0]['duration']
+                    duration_in_traffic = data['routes'][0]['legs'][0].get('duration_in_traffic', {})
 
-            static_map_url = f'https://maps.googleapis.com/maps/api/staticmap?size=600x400&path=weight:5|color:blue|enc:{polyline}&key={GOOGLE_API_KEY}'
-            map_response = requests.get(static_map_url)
-
-            if map_response.status_code == 200:
-                # Return both the image and the duration
-                image_bytes = BytesIO(map_response.content)
-                return {
-                    'arrivingTrafficDuration': duration_in_traffic,
-                    'arrivingDuration': arriving_duration,
-                    'mapImage': image_bytes.getvalue().decode('latin1')  # Encoding to pass binary data as a string
-                }
-            else:
-                logging.error("Failed to get map with: " + str(map_response.status_code))
-                logging.error("Data:")
-                logging.error(json.dumps(data))
-                logging.error("args:")
-                logging.error(json.dumps({"origin_latitude": origin_latitude, "origin_longitude": origin_longitude, 
-                              "destination_latitude": destination_latitude, "destination_longitude": destination_longitude}))
-                return None
+                    # Build the static map URL
+                    static_map_url = f'https://maps.googleapis.com/maps/api/staticmap?size=600x400&path=weight:5|color:blue|enc:{polyline}&key={GOOGLE_API_KEY}'
+                    async with session.get(static_map_url) as map_response:
+                        if map_response.status == 200:
+                            # Return both image bytes and durations
+                            image_bytes = BytesIO(await map_response.read())
+                            return {
+                                'arrivingTrafficDuration': duration_in_traffic,
+                                'arrivingDuration': arriving_duration,
+                                'mapImage': image_bytes.getvalue().decode('latin1')  # Encoding to pass binary data as a string
+                            }
+                        else:
+                            logging.error("Failed to get map with status: " + str(map_response.status))
+                            logging.error("Data:")
+                            logging.error(json.dumps(data))
+                            logging.error("args:")
+                            logging.error(json.dumps({"origin_latitude": origin_latitude, "origin_longitude": origin_longitude, 
+                                        "destination_latitude": destination_latitude, "destination_longitude": destination_longitude}))
+                            return None
+                else:
+                    logging.error("Failed to get directions with status: " + data['status'])
+                    logging.error("Data:")
+                    logging.error(json.dumps(data))
+                    logging.error("args:")
+                    logging.error(json.dumps({"origin_latitude": origin_latitude, "origin_longitude": origin_longitude, 
+                                    "destination_latitude": destination_latitude, "destination_longitude": destination_longitude}))
+                    return None
+    async def run_all_directions_queries_in_parallel(
+        origin_lat: float, 
+        origin_lng: float, 
+        dest_lat: float, 
+        dest_lng: float):
+        response_json, other_way_arriving_json, response_json_reversed, other_way_returning_json = await asyncio.gather(
+            LocationFinder.get_directions(float(origin_lat), float(origin_lng), float(dest_lat), float(dest_lng)),
+            LocationFinder.get_directions(float(dest_lat), float(dest_lng), float(origin_lat), float(origin_lng)),
+            LocationFinder.get_directions(float(dest_lat), float(dest_lng), float(origin_lat), float(origin_lng), returning=True),
+            LocationFinder.get_directions(float(dest_lat), float(dest_lng), float(origin_lat), float(origin_lng)),
+        )
+        return response_json, other_way_arriving_json, response_json_reversed, other_way_returning_json
+    
+    #Adds whether a drive is in the direction of traffic or goes against it, uses simple queries of the reverse way and compares
+    #the times
+    def add_traffic_directions(response_json, other_way_arriving_json, other_way_returning_json):
+        #if theres less than a 7 min differences its not worth talking about
+        if abs(response_json["arrivingDuration"]["value"] - other_way_arriving_json["arrivingDuration"]["value"]) < 7:
+            response_json["arrivingTrafficDirection"] = "Neutral"
         else:
-            logging.error("Failed to get directions with: " + data['status'])
-            logging.error("Data:")
-            logging.error(json.dumps(data))
-            logging.error("args:")
-            logging.error(json.dumps({"origin_latitude": origin_latitude, "origin_longitude": origin_longitude, 
-                              "destination_latitude": destination_latitude, "destination_longitude": destination_longitude}))
-            return None
+            # now that we know the difference is more than 7 min we can just check if its greater than or less than
+            if response_json["arrivingDuration"]["value"] > other_way_arriving_json["arrivingDuration"]["value"]:
+                response_json["arrivingTrafficDirection"] = "With"
+            else:
+                response_json["arrivingTrafficDirection"] = "Against"
+    
+        if abs(response_json["leavingDuration"]["value"] - other_way_returning_json["arrivingDuration"]["value"]) < 10:
+            response_json["leavingTrafficDirection"] = "Neutral"
+        else:
+            if response_json["leavingDuration"]["value"] > other_way_returning_json["arrivingDuration"]["value"]:
+                response_json["leavingTrafficDirection"] = "With"
+            else:
+                response_json["leavingTrafficDirection"] = "Against"
     #Async because we run in parrallel with querying the census and hud apis
     async def get_location_map_async(origin_latitude: float, origin_longitude: float) -> dict:
         static_map_url = 'https://maps.googleapis.com/maps/api/staticmap'

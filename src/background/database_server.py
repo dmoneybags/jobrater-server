@@ -1104,14 +1104,15 @@ class DatabaseServer:
         if not origin_lat or not origin_lng or not dest_lat or not dest_lng:
             logging.error("MISSING PARAMETERS! Cannot get directions")
             return json.dumps({'message': 'Missing required parameters'}), 400
-        responseJson = LocationFinder.get_directions(origin_lat, origin_lng, dest_lat, dest_lng)
-        if not responseJson:
+        response_json, other_way_arriving_json, response_json_reversed, other_way_returning_json = asyncio.run(LocationFinder.run_all_directions_queries_in_parallel(origin_lat, origin_lng, dest_lat, dest_lng))
+        if not response_json:
             return json.dumps({'message': 'Failed to grab location'}), 400
-        responseJsonReversed = LocationFinder.get_directions(dest_lat, dest_lng, origin_lat, origin_lng, returning=True)
-        responseJson["leavingDuration"] = responseJsonReversed["arrivingDuration"]
-        responseJson["leavingTrafficDuration"] = responseJsonReversed["arrivingTrafficDuration"]
+        response_json["leavingDuration"] = response_json_reversed["arrivingDuration"]
+        response_json["leavingTrafficDuration"] = response_json_reversed["arrivingTrafficDuration"]
+        logging.info(json.dumps(response_json, indent=2))
+        LocationFinder.add_traffic_directions(response_json, other_way_arriving_json, other_way_returning_json)
         logging.info("=============== END GET DIRECTIONS =================")
-        return json.dumps(responseJson), 200
+        return json.dumps(response_json), 200
     @app.route('/api/get_relocation_data', methods=['POST'])
     @PaymentDecorators.pro_subscription_required
     @token_required

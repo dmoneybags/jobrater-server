@@ -13,7 +13,7 @@ from flask import Flask, request, jsonify, abort, Response
 
 class PaymentDecorators:
     #flag for if we're actually requiring payment, for beta testing we leave this off
-    REQUIRING_PAYMENT = os.environ.get("REQUIRE_PAYMENT", 1)
+    REQUIRING_PAYMENT = int(os.environ.get("REQUIRE_PAYMENT", 1))
     if not REQUIRING_PAYMENT:
         logging.critical('''
     #
