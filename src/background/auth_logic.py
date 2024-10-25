@@ -21,7 +21,7 @@ function wrapper that requires the function it wraps to have a token in the auth
 evaluates that the token exists and is valid
 
 args:
-    f: Vallable
+    f: Callable
 returns:
     http error if theres no token, allows the function to run as normal if there is
 '''
