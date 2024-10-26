@@ -19,6 +19,7 @@ import logging
 
 np.set_printoptions(threshold=np.inf)
 
+CALCULATE_EMBEDDING_INFO=False
 
 # Download NLTK stop words list if not already downloaded
 class ResumeComparison:
@@ -236,9 +237,6 @@ class ResumeComparison:
         logging.debug("Loaded sorted index list")
         resume_sentences: list[str] = ResumeComparison.split_into_sentences(resume.file_text)
         resume_comparison_data: Dict = {
-            "userId": str(user_id),
-            "jobId": job_id,
-            "resumeId": str(resume.id), 
             "similarityMatrix": ResumeComparison.serialize_similarity_matrix(similarity_matrix),
             "sortedIndexList": ResumeComparison.serialize_sorted_index_list(sorted_index_list),
             "jobDescriptionSentences": job_description_sentences,
@@ -246,7 +244,13 @@ class ResumeComparison:
         }
         return resume_comparison_data
     def get_resume_comparison_dict(job_description: str, job_id: str, resume: Resume, user_id: str | UUID) -> Dict:
-        resume_comparison_data = ResumeComparison.get_embedding_comparison_dict(job_description, job_id, resume, user_id)
+        resume_comparison_data = {
+            "userId": str(user_id),
+            "jobId": job_id,
+            "resumeId": str(resume.id)
+        }
+        if CALCULATE_EMBEDDING_INFO:
+            resume_comparison_data = ResumeComparison.get_embedding_comparison_dict(job_description, job_id, resume, user_id)
         llm_info = asyncio.run(ResumeComparison.calculate_average_llm_info(job_description, resume.file_text))
         resume_comparison_data.update(llm_info)
         return resume_comparison_data
