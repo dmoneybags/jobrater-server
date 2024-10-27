@@ -7,6 +7,7 @@ from company_table import CompanyTable
 from user_job_table import UserJobTable
 from job_location_table import JobLocationTable
 from job import Job, Mode
+from company import Company
 from user_specific_job_data import UserSpecificJobData
 from typing import Dict
 from mysql.connector.errors import IntegrityError
@@ -121,12 +122,16 @@ class JobTable:
         #check that the company isn't already in our DB if it isn't then we add it
 
         # ============== Company ===============
-        if not CompanyTable.read_company_by_id(job.company.company_name):
+        company = CompanyTable.read_company_by_id(job.company.company_name)
+        if not company:
             CompanyTable.add_company(job.company)
             logging.info("COMPANY SUCCESSFULLY ADDED")
         else:
             logging.info("COMPANY ALREADY IN DB")
-            job.company = CompanyTable.read_company_by_id(job.company.company_name)
+            if company.isEmpty() and not job.company.isEmpty():
+                CompanyTable.update_company(job.company)
+                logging.info("COMPANY DETAILS UPDATED IN DB")
+            job.company = company
         # =====================================
 
         # =============== Job =================
