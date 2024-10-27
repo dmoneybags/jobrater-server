@@ -1090,7 +1090,6 @@ class DatabaseServer:
             return json.dumps({'message': 'Failed to grab location'}), 400
         response_json["leavingDuration"] = response_json_reversed["arrivingDuration"]
         response_json["leavingTrafficDuration"] = response_json_reversed["arrivingTrafficDuration"]
-        logging.info(json.dumps(response_json, indent=2))
         LocationFinder.add_traffic_directions(response_json, other_way_arriving_json, other_way_returning_json)
         logging.info("=============== END GET DIRECTIONS =================")
         return json.dumps(response_json), 200
