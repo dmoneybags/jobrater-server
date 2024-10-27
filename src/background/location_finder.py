@@ -9,6 +9,8 @@ from location import Location
 from io import BytesIO
 import json
 from datetime import datetime, timedelta, timezone
+from tzwhere import tzwhere
+import pytz
 import logging
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -16,39 +18,45 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 class LocationFinder:
     base_url : str = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
 
-    def get_next_monday_8am_timestamp() -> int:
-        """Returns the Unix timestamp for the next available Monday at 8:00 AM, at least a day away."""
+    def get_time_zone_str_from_lat_and_lng(lat, lng) -> str:
+        tz = tzwhere.tzwhere()
+        timezone_str = tz.tzNameAt(lat, lng)
+        return timezone_str
+
+    def get_next_monday_timestamp(local_timezone_str: str, hour: int, minute: int) -> int:
+        """Returns the Unix timestamp for the next available Monday at the specified hour and minute in the local timezone."""
+        
         # Get current UTC time
-        now = datetime.now(timezone.utc)
+        now_utc = datetime.now(pytz.utc)
 
         # Calculate the number of days until the next Monday
-        days_until_monday = (7 - now.weekday()) % 7 + 1  # At least 7 days away
+        days_until_monday = (7 - now_utc.weekday()) % 7 + 1  # At least 7 days away
+        
+        # Create a timezone object for the specified local timezone
+        local_timezone = pytz.timezone(local_timezone_str)
 
-        # Create the timestamp for the next Monday at 8:00 AM UTC
-        next_monday_8am = now + timedelta(days=days_until_monday)
-        next_monday_8am = next_monday_8am.replace(hour=8, minute=0, second=0, microsecond=0)
+        # Create the local datetime for the next Monday at the specified time
+        next_monday_local = now_utc + timedelta(days=days_until_monday)
+        next_monday_local = next_monday_local.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-        # Convert to Unix timestamp
-        unix_timestamp = int(next_monday_8am.timestamp())
-        logging.info(f"Querying Google Maps with leaving time of {unix_timestamp}")
-        return unix_timestamp
+        # Localize the datetime to the specified timezone
+        next_monday_local = local_timezone.localize(next_monday_local)
 
-    def get_next_monday_5pm_timestamp() -> int:
-        """Returns the Unix timestamp for the next available Monday at 5:00 PM, at least a day away."""
-        # Get current UTC time
-        now = datetime.now(timezone.utc)
-
-        # Calculate the number of days until the next Monday
-        days_until_monday = (7 - now.weekday()) % 7 + 1  # At least 7 days away
-
-        # Create the timestamp for the next Monday at 5:00 PM UTC
-        next_monday_5pm = now + timedelta(days=days_until_monday)
-        next_monday_5pm = next_monday_5pm.replace(hour=17, minute=0, second=0, microsecond=0)
+        # Convert the localized datetime to UTC
+        next_monday_utc = next_monday_local.astimezone(pytz.utc)
 
         # Convert to Unix timestamp
-        unix_timestamp = int(next_monday_5pm.timestamp())
-        logging.info(f"Querying Google Maps with returning time of {unix_timestamp}")
+        unix_timestamp = int(next_monday_utc.timestamp())
+        logging.info(f"Querying Google Maps with leaving time of {unix_timestamp} (Local: {next_monday_local})")
         return unix_timestamp
+
+    def get_next_monday_5pm_timestamp(local_timezone_str: str) -> int:
+        """Returns the Unix timestamp for the next available Monday at 5:00 PM in the specified local timezone."""
+        return LocationFinder.get_next_monday_timestamp(local_timezone_str, hour=17, minute=0)
+
+    def get_next_monday_8am_timestamp(local_timezone_str: str) -> int:
+        """Returns the Unix timestamp for the next available Monday at 8:00 AM in the specified local timezone."""
+        return LocationFinder.get_next_monday_timestamp(local_timezone_str, hour=8, minute=0)
     '''
     try_get_company_address
 
@@ -81,14 +89,14 @@ class LocationFinder:
     ) -> Dict:
         # Define the base URL for Google Directions API
         directions_url = 'https://maps.googleapis.com/maps/api/directions/json'
-        
+        timezone_str = LocationFinder.get_time_zone_str_from_lat_and_lng(origin_latitude, origin_longitude)
         # Define parameters based on 'returning' flag
         if returning:
             params = {
                 'origin': f"{origin_latitude},{origin_longitude}",
                 'destination': f"{destination_latitude},{destination_longitude}",
                 'key': GOOGLE_API_KEY,
-                'departure_time': LocationFinder.get_next_monday_5pm_timestamp(),
+                'departure_time': LocationFinder.get_next_monday_5pm_timestamp(timezone_str),
                 'traffic_model': 'pessimistic' 
             }
         else:
@@ -96,7 +104,7 @@ class LocationFinder:
                 'origin': f"{origin_latitude},{origin_longitude}",
                 'destination': f"{destination_latitude},{destination_longitude}",
                 'key': GOOGLE_API_KEY,
-                'departure_time': LocationFinder.get_next_monday_8am_timestamp(),
+                'departure_time': LocationFinder.get_next_monday_8am_timestamp(timezone_str),
                 'traffic_model': 'pessimistic' 
             }
 
