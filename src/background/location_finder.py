@@ -89,14 +89,16 @@ class LocationFinder:
                 'origin': f"{origin_latitude},{origin_longitude}",
                 'destination': f"{destination_latitude},{destination_longitude}",
                 'key': GOOGLE_API_KEY,
-                'departure_time': LocationFinder.get_next_monday_5pm_timestamp()
+                'departure_time': LocationFinder.get_next_monday_5pm_timestamp(),
+                'traffic_model': 'best_guess' 
             }
         else:
             params = {
                 'origin': f"{origin_latitude},{origin_longitude}",
                 'destination': f"{destination_latitude},{destination_longitude}",
                 'key': GOOGLE_API_KEY,
-                'departure_time': LocationFinder.get_next_monday_8am_timestamp()
+                'departure_time': LocationFinder.get_next_monday_8am_timestamp(),
+                'traffic_model': 'best_guess' 
             }
 
         async with aiohttp.ClientSession() as session:
