@@ -334,25 +334,6 @@ class DatabaseServer:
             logging.info("CHECKING IF WE NEED TO SCRAPE GLASSDOOR")
             if (not CompanyTable.read_company_by_id(company_name) and CANSCRAPEGLASSDOOR and not message["noCompanies"]):
                 if (not message["gdPageSource"]):
-                    '''
-                    t1 = time.time()
-                    logging.info("RETRIEVING COMPANY FROM GLASSDOOR")
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    company_data: Dict = loop.run_until_complete(get_company_data_async(company_name))
-                    company : Company = Company(company_name, company_data["businessOutlookRating"], 
-                                                company_data["careerOpportunitiesRating"], company_data["ceoRating"],
-                                                company_data["compensationAndBenefitsRating"],
-                                                company_data["cultureAndValuesRating"],
-                                                company_data["diversityAndInclusionRating"],
-                                                company_data["seniorManagementRating"],
-                                                company_data["workLifeBalanceRating"],
-                                                company_data["overallRating"],
-                                                company_data["glassdoorUrl"])
-                    job_json["company"] = company.to_json()
-                    t2 = time.time()
-                    logging.info("Scraping glassdoor took: " + str(t2 - t1) + " seconds")
-                    '''
                     job_json["company"] = Company(company_name, 0, 0, 0, 0, 0, 0, 0, 0, 0, None).to_json()
                 else:
                     logging.info("CLIENT SENT SOURCE")

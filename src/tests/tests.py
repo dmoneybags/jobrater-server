@@ -58,6 +58,87 @@ job_data = {
     },
     "location": None
 }
+job_data_null_company = {
+    "jobName": "Specification Sales",
+    "locationStr": "Cupertino, CA",
+    "jobPostedAt": 1724433417,
+    "applicants": "100",
+    "paymentFreq": "yr",
+    "paymentBase": 90,
+    "paymentHigh": 110,
+    "mode": "Hybrid",
+    "careerStage": "Mid-Senior level",
+    "jobId": "31412598",
+    "description": "beep boop",
+    "company": {
+        "companyName": "Apple",
+        "businessOutlookRating": 0,
+        "careerOpportunitiesRating": 0,
+        "ceoRating": 0,
+        "compensationAndBenefitsRating": 0,
+        "cultureAndValuesRating": 0,
+        "diversityAndInclusionRating": 0,
+        "overallRating": 0,
+        "seniorManagementRating": 0,
+        "workLifeBalanceRating": 0,
+        "glassdoorUrl": "ijiksmfo"
+    },
+    "location": None
+}
+job_data_null_company_microsoft = {
+    "jobName": "Specification Sales",
+    "locationStr": "Cupertino, CA",
+    "jobPostedAt": 1724433417,
+    "applicants": "100",
+    "paymentFreq": "yr",
+    "paymentBase": 90,
+    "paymentHigh": 110,
+    "mode": "Hybrid",
+    "careerStage": "Mid-Senior level",
+    "jobId": "1539135353",
+    "description": "beep boop",
+    "company": {
+        "companyName": "Microsoft",
+        "businessOutlookRating": 0,
+        "careerOpportunitiesRating": 0,
+        "ceoRating": 0,
+        "compensationAndBenefitsRating": 0,
+        "cultureAndValuesRating": 0,
+        "diversityAndInclusionRating": 0,
+        "overallRating": 0,
+        "seniorManagementRating": 0,
+        "workLifeBalanceRating": 0,
+        "glassdoorUrl": "ijiksmfo"
+    },
+    "location": None
+}
+job_data_microsoft = {
+    "jobName": "Specification Sales",
+    "locationStr": "Cupertino, CA",
+    "jobPostedAt": 1724433417,
+    "applicants": "100",
+    "paymentFreq": "yr",
+    "paymentBase": 90,
+    "paymentHigh": 110,
+    "mode": "Hybrid",
+    "careerStage": "Mid-Senior level",
+    "jobId": "1539135353",
+    "description": "beep boop",
+    "company": {
+        "companyName": "Microsoft",
+        "businessOutlookRating": 5,
+        "careerOpportunitiesRating": 5,
+        "ceoRating": 4,
+        "compensationAndBenefitsRating": 5,
+        "cultureAndValuesRating": 4,
+        "diversityAndInclusionRating": 5,
+        "overallRating": 4,
+        "seniorManagementRating": 5,
+        "workLifeBalanceRating": 5,
+        "glassdoorUrl": "ijiksmfo"
+    },
+    "location": None
+}
 def user_tests():
     print("TESTING USER CODE")
 
@@ -156,8 +237,29 @@ def job_tests(user_id):
     print("COMPANY LOGIC SUCEEDED \n\n")
     print("READING JOB SUCEEDED \n\n")
 
-    print("========== PASSED COMPANY TESTS =========== \n\n")
+    print("TESTING ADDING A JOB WILL NULL VALUES")
 
+    job = Job.create_with_json(job_data_null_company)
+
+    JobTable.add_job_with_foreign_keys(job, user_id)
+    company: Company = CompanyTable.read_company_by_id("Apple")
+    assert(not company.isEmpty())
+    assert(company.business_outlook_rating != 0)
+    assert(company.career_opportunities_rating != 0)
+    JobTable.delete_job_by_id(job_data_null_company["jobId"])
+
+    print("TESTING UPDATING COMPANY")
+    job = Job.create_with_json(job_data_null_company_microsoft)
+    JobTable.add_job_with_foreign_keys(job, user_id)
+    job = Job.create_with_json(job_data_microsoft)
+    JobTable.add_job_with_foreign_keys(job, user_id)
+    company: Company = CompanyTable.read_company_by_id("Microsoft")
+    assert(not company.isEmpty())
+    assert(company.business_outlook_rating != 0)
+    assert(company.career_opportunities_rating != 0)
+    #Both null microsoft and reg job have same id
+    JobTable.delete_job_by_id(job.job_id)
+    print("========== PASSED JOB TESTS =========== \n\n")
 def user_job_tests(user_id):
     print("BEGINNNING USER JOB TESTS \n\n")
     print("TESTING READING BACK USER JOBS AFTER ADDING")
