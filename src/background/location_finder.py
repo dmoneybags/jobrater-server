@@ -31,7 +31,7 @@ class LocationFinder:
         # Convert the datetime to a Unix timestamp
         next_monday_8am_utc = next_monday_8am.astimezone(timezone.utc)
         unix_timestamp = int(next_monday_8am_utc.timestamp())
-        
+        logging.info(f"Querying google maps with leaving time of {unix_timestamp}")
         return unix_timestamp
 
     def get_next_monday_5pm_timestamp() -> int:
@@ -49,6 +49,7 @@ class LocationFinder:
         # Convert the datetime to a Unix timestamp
         next_monday_5pm_utc = next_monday_5pm.astimezone(timezone.utc)
         unix_timestamp = int(next_monday_5pm_utc.timestamp())
+        logging.info(f"Querying google maps with returning time of {unix_timestamp}")
         return unix_timestamp
     '''
     try_get_company_address
@@ -90,7 +91,7 @@ class LocationFinder:
                 'destination': f"{destination_latitude},{destination_longitude}",
                 'key': GOOGLE_API_KEY,
                 'departure_time': LocationFinder.get_next_monday_5pm_timestamp(),
-                'traffic_model': 'best_guess' 
+                'traffic_model': 'PESSIMISTIC' 
             }
         else:
             params = {
