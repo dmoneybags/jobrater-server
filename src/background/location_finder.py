@@ -37,12 +37,16 @@ class LocationFinder:
 
         # Create the local datetime for the next Monday at the specified time
         next_monday_local = now_utc + timedelta(days=days_until_monday)
+        
+        # Convert to local time before setting the hour and minute
+        next_monday_local = next_monday_local.astimezone(local_timezone)
         next_monday_local = next_monday_local.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-        # Localize the datetime to the specified timezone
-        next_monday_local = local_timezone.localize(next_monday_local)
+        # If the datetime is now past the specified time on that Monday, add a week
+        if next_monday_local < datetime.now(local_timezone):
+            next_monday_local += timedelta(weeks=1)
 
-        # Convert the localized datetime to UTC
+        # Convert the localized datetime back to UTC
         next_monday_utc = next_monday_local.astimezone(pytz.utc)
 
         # Convert to Unix timestamp
