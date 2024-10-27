@@ -101,7 +101,7 @@ class LocationFinder:
                 'destination': f"{destination_latitude},{destination_longitude}",
                 'key': GOOGLE_API_KEY,
                 'departure_time': LocationFinder.get_next_monday_5pm_timestamp(timezone_str),
-                'traffic_model': 'pessimistic' 
+                'traffic_model': 'best_guess' 
             }
         else:
             params = {
@@ -109,7 +109,7 @@ class LocationFinder:
                 'destination': f"{destination_latitude},{destination_longitude}",
                 'key': GOOGLE_API_KEY,
                 'departure_time': LocationFinder.get_next_monday_8am_timestamp(timezone_str),
-                'traffic_model': 'pessimistic' 
+                'traffic_model': 'best_guess' 
             }
 
         async with aiohttp.ClientSession() as session:
