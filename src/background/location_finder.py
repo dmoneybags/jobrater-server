@@ -17,39 +17,37 @@ class LocationFinder:
     base_url : str = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
 
     def get_next_monday_8am_timestamp() -> int:
-        """Returns the Unix timestamp for the next available Monday at 7:00 AM, at least a day away."""
-        # Get current local time
-        now = datetime.now()
+        """Returns the Unix timestamp for the next available Monday at 8:00 AM, at least a day away."""
+        # Get current UTC time
+        now = datetime.now(timezone.utc)
 
         # Calculate the number of days until the next Monday
         days_until_monday = (7 - now.weekday()) % 7 + 1  # At least 7 days away
 
-        # Create the timestamp for the next Monday at 7:00 AM
+        # Create the timestamp for the next Monday at 8:00 AM UTC
         next_monday_8am = now + timedelta(days=days_until_monday)
         next_monday_8am = next_monday_8am.replace(hour=8, minute=0, second=0, microsecond=0)
 
-        # Convert the datetime to a Unix timestamp
-        next_monday_8am_utc = next_monday_8am.astimezone(timezone.utc)
-        unix_timestamp = int(next_monday_8am_utc.timestamp())
-        logging.info(f"Querying google maps with leaving time of {unix_timestamp}")
+        # Convert to Unix timestamp
+        unix_timestamp = int(next_monday_8am.timestamp())
+        logging.info(f"Querying Google Maps with leaving time of {unix_timestamp}")
         return unix_timestamp
 
     def get_next_monday_5pm_timestamp() -> int:
         """Returns the Unix timestamp for the next available Monday at 5:00 PM, at least a day away."""
-        # Get current local time
-        now = datetime.now()
+        # Get current UTC time
+        now = datetime.now(timezone.utc)
 
         # Calculate the number of days until the next Monday
-        days_until_monday = (7 - now.weekday()) % 7 + 1 # At least 7 days away
+        days_until_monday = (7 - now.weekday()) % 7 + 1  # At least 7 days away
 
-        # Create the timestamp for the next Monday at 5:00 PM
+        # Create the timestamp for the next Monday at 5:00 PM UTC
         next_monday_5pm = now + timedelta(days=days_until_monday)
         next_monday_5pm = next_monday_5pm.replace(hour=17, minute=0, second=0, microsecond=0)
 
-        # Convert the datetime to a Unix timestamp
-        next_monday_5pm_utc = next_monday_5pm.astimezone(timezone.utc)
-        unix_timestamp = int(next_monday_5pm_utc.timestamp())
-        logging.info(f"Querying google maps with returning time of {unix_timestamp}")
+        # Convert to Unix timestamp
+        unix_timestamp = int(next_monday_5pm.timestamp())
+        logging.info(f"Querying Google Maps with returning time of {unix_timestamp}")
         return unix_timestamp
     '''
     try_get_company_address
