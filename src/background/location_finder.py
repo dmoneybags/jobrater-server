@@ -10,8 +10,8 @@ from io import BytesIO
 import json
 from datetime import datetime, timedelta, timezone
 import pytz
-from geopy import geocoders
 import logging
+from timezonefinder import TimezoneFinder
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
@@ -19,9 +19,9 @@ class LocationFinder:
     base_url : str = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
 
     def get_time_zone_str_from_lat_and_lng(lat, lng) -> str:
-        g = geocoders.GoogleV3(api_key=GOOGLE_API_KEY)
-        tz = str(g.timezone((lat, lng)))
-        return tz
+        tf = TimezoneFinder()
+        timezone_str = tf.timezone_at(lat=lat, lng=lng)
+        return timezone_str
 
     def get_next_monday_timestamp(local_timezone_str: str, hour: int, minute: int) -> int:
         """Returns the Unix timestamp for the next available Monday at the specified hour and minute in the local timezone."""
