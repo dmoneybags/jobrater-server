@@ -136,15 +136,15 @@ class ResumeComparison:
         #return text
     def calculate_llm_info(job_description: str, resume_text: str):
         # Assuming clean_llm_text is synchronous, otherwise make it async
-        job_description = ResumeComparison.clean_llm_text(job_description)
-        resume_text = ResumeComparison.clean_llm_text(resume_text)
+        #job_description = ResumeComparison.clean_llm_text(job_description)
+        #resume_text = ResumeComparison.clean_llm_text(resume_text)
         
         t1 = time.time()
 
         with OpenAI(api_key=os.environ["OPEN_AI_KEY"]) as client:
             # Make the API request asynchronous
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant skilled in evaluating resumes based on job descriptions."},
                     {"role": "user", "content": f'''Job Description: {job_description}\n\nResume: {resume_text}\n\n
