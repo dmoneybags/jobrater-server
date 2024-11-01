@@ -139,9 +139,6 @@ pydantic_core==2.20.1
 Pygments==2.18.0
 PyJWT==2.0.1
 pymongo==4.8.0
-pyobjc-core==10.3
-pyobjc-framework-Cocoa==10.3
-pyobjc-framework-Quartz==10.3
 pyOpenSSL==24.2.1
 pyparsing==3.1.4
 pyrsistent==0.20.0
