@@ -59,6 +59,7 @@ from user_free_data_table import UserFreeDataTable
 from user import UserInvalidData
 from resume_nlp.resume_comparison import ResumeComparison
 from resume_comparison_collection import ResumeComparisonCollection
+from feedback_collection import FeedbackCollection
 from location_finder import LocationFinder
 from relocation_data_grabber import RelocationDataGrabber
 from company import Company
@@ -1044,6 +1045,24 @@ class DatabaseServer:
         if not user_subscription:
             return json.dumps({}), 200
         return json.dumps(user_subscription.to_json()), 200
+    ##################################################################################################
+    #
+    #
+    # Feedback routes
+    #
+    #
+    #################################################################################################
+    @app.route('/databases/submit_feedback', methods=['POST'])
+    @token_required
+    def submit_feedback():
+        logging.info("=============== GOT REQUEST TO ADD FEEDBACK =================")
+        logging.info(request.url)
+        token : str = request.headers.get('Authorization')
+        user : User | None = decode_user_from_token(token)
+        feedback: Dict = request.get_json()
+        feedback["userId"] = str(user.user_id)
+        FeedbackCollection.add_feedback(feedback)
+        return "success", 200
     ##################################################################################################
     #
     #
