@@ -3,10 +3,11 @@ from datetime import timedelta
 from typing import Dict
 from errors import NoFreeRatingsLeft
 from database_functions import DatabaseFunctions, get_connection
+from user_table import UserTable
 
 class UserFreeDataTable:
     def __get_add_free_data_query() -> str:
-        return 'INSERT INTO UserFreeData (UserIdFk) VALUES (%s)'
+        return 'INSERT INTO UserFreeData (UserIdFk, Email) VALUES (%s, %s)'
     def __get_read_free_data_query() -> str:
         return 'SELECT * FROM UserFreeData WHERE UserIdFk=%s'
     def __get_update_free_data_query() -> str:
@@ -30,10 +31,11 @@ class UserFreeDataTable:
         return 0
     def add_free_data(userId: str):
         userId = str(userId) #Sanity check no uuids
+        user = UserTable.read_user_by_id(userId)
         with get_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
                 query = UserFreeDataTable.__get_add_free_data_query()
-                cursor.execute(query, (userId,))
+                cursor.execute(query, (userId, user.email))
                 conn.commit()
     def use_free_resume_rating(userId: str):
         userId = str(userId) #Sanity check no uuids
@@ -42,6 +44,8 @@ class UserFreeDataTable:
         if not free_data:
             UserFreeDataTable.add_free_data(userId)
             free_data = UserFreeDataTable.read_free_data(userId)
+        if datetime.datetime.now() - free_data["CreatedAt"] > timedelta(days=14):
+            raise NoFreeRatingsLeft()
         #if we have a non zero number of ratings left
         if free_data["FreeRatingsLeft"]:
             #decrement

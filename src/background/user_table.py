@@ -127,10 +127,10 @@ class UserTable:
         logging.debug("READ USER WITH EMAIL " + email + " GOT "+ str(result))
         return User.create_with_sql_row(result)
     '''
-    read_user_by_email
+    read_user_by_id
 
     args:
-        email: string email of a user
+        user_id: string user_id of user
 
     returns:
         User with data from sql query

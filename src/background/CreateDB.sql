@@ -30,12 +30,12 @@ CONSTRAINT UserSubscription_FK FOREIGN KEY (UserId) REFERENCES User(UserId) ON D
 );
 CREATE TABLE UserFreeData
 (
-    UserIdFk VARCHAR(36) NOT NULL,
+    UserIdFk VARCHAR(36),
+    Email VARCHAR(255),
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     FreeRatingsLeft TINYINT DEFAULT 3,
     LastReload TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-CONSTRAINT UserFreeData_PK PRIMARY KEY (UserIdFk),
-CONSTRAINT UserFreeData_FK FOREIGN KEY (UserIdFk) REFERENCES User(UserId) ON DELETE CASCADE
+CONSTRAINT UserFreeData_PK PRIMARY KEY (UserIdFk)
 );
 CREATE TABLE Company
 (
@@ -57,7 +57,7 @@ CONSTRAINT Company_PK PRIMARY KEY (CompanyName)
 );
 CREATE TABLE Job
 (
-    JobId VARCHAR(10) NOT NULL,
+    JobId VARCHAR(128) NOT NULL,
     Applicants TINYINT,
     CareerStage VARCHAR(20),
     Job VARCHAR(255),
@@ -78,7 +78,7 @@ CREATE TABLE UserJob
 (
     -- Hash of job ID and user ID, ensures both arent already in db
     UserJobId VARCHAR(36) NOT NULL UNIQUE,
-    JobId VARCHAR(10) NOT NULL,
+    JobId VARCHAR(128) NOT NULL,
     UserId VARCHAR(36) NOT NULL,
     IsFavorite BOOLEAN NOT NULL DEFAULT FALSE,
     HasApplied BOOLEAN NOT NULL DEFAULT FALSE,
@@ -90,7 +90,7 @@ CONSTRAINT UserJob_FK2 FOREIGN KEY (UserId) REFERENCES User(UserId) ON DELETE CA
 CREATE TABLE JobLocation
 (
     QueryStr VARCHAR(70),
-    JobIdFK VARCHAR(10),
+    JobIdFK VARCHAR(128),
     AddressStr VARCHAR(255),
     City VARCHAR(255),
     ZipCode VARCHAR(255),
