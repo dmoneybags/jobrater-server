@@ -149,7 +149,7 @@ class ResumeComparison:
                     {"role": "system", "content": "You are a helpful assistant skilled in evaluating resumes based on job descriptions."},
                     {"role": "user", "content": f'''Job Description: {job_description}\n\nResume: {resume_text}\n\n
                     Please compare this preprocessed resume to this preprocessed job description. Provide a match score from 0 to 100, ensuring that scores are spread evenly across the entire range (0-100), 
-                    and avoid favoring numbers that end in 5 or 0 (e.g. 25, 30, 45).
+                    and avoid favoring numbers that end in 5 or 0 (e.g. 25, 30, 45). Experience required is very important. 
                     List up to 3 pros and 3 cons of the resume, and suggest tips for improvement. For easy scraping please format your response as JSON, with the key to
                     match score being matchScore, the key to pros being pros and pros being an array, the key to cons being cons and cons being an array, and tips for improvement
                     having a key of tips and being an array.'''},
@@ -178,9 +178,10 @@ class ResumeComparison:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a hiring manager evaluating resumes to the qualifications of job descriptions."},
+                    {"role": "system", "content": "You are a helpful assistant skilled in evaluating resumes based on job descriptions."},
                     {"role": "user", "content": f'''Job Description: {job_description}\n\nResume: {resume_text}\n\n
                     Please compare this preprocessed resume to this preprocessed job description. Provide a match score from 0 to 100, ensuring that scores are spread evenly across the entire range (0-100), and avoid favoring numbers that end in 5 or 0 (e.g. 25, 30, 45). 
+                    Experience required is very important. 
                     For easy scraping please format your response as JSON, with the key to
                     match score being matchScore.'''},
                 ]
