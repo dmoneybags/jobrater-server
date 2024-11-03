@@ -114,11 +114,6 @@ stripe.api_key = STRIPE_TEST_API_KEY
 
 ADDUSERJOBBYDEFAULT = False
 
-@app.before_request
-def check_uri():
-    if not request.path:
-        abort(400, description="Bad Request: Missing URI")
-
 #All frequently queried routes are timed. If a route isnt timed its not used extremely often
 
 class DatabaseServer:
