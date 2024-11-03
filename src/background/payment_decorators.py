@@ -60,7 +60,7 @@ class PaymentDecorators:
                 user : User | None = decode_user_from_token(token)
                 user_subscription: UserSubscription = UserSubscriptionTable.read_subscription(user.user_id)
                 if not user_subscription or not user_subscription.valid():
-                    if len(ResumeTable.read_user_resumes(user.user_id)) and not req_json["replace"]:
+                    if len(ResumeTable.read_user_resumes(user.user_id)) and not req_json.get("replace", False):
                         return jsonify({'message': 'Pro Subscription required'}), 402
             return f(*args, **kwargs)
         return decorated
