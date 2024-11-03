@@ -4,6 +4,7 @@ from typing import Dict
 from errors import NoFreeRatingsLeft
 from database_functions import DatabaseFunctions, get_connection
 from user_table import UserTable
+import logging
 
 class UserFreeDataTable:
     def __get_add_free_data_query() -> str:
@@ -59,8 +60,8 @@ class UserFreeDataTable:
         free_data = UserFreeDataTable.read_free_data(userId)
         #Add if for any reason its not in there
         if not free_data:
-            UserFreeDataTable.add_free_data(userId)
-            free_data = UserFreeDataTable.read_free_data(userId)
+            logging.critical(f"COULD NOT FIND USER FREE DATA FOR USERID: {userId}")
+            raise NoFreeRatingsLeft()
         if datetime.datetime.now() - free_data["CreatedAt"] > timedelta(days=14):
             raise NoFreeRatingsLeft()
         #if we have a non zero number of ratings left
