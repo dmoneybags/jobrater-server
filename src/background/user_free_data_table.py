@@ -12,6 +12,10 @@ class UserFreeDataTable:
         return 'SELECT * FROM UserFreeData WHERE UserIdFk=%s'
     def __get_update_free_data_query() -> str:
         return 'UPDATE UserFreeData SET FreeRatingsLeft=%s, LastReload=%s WHERE UserIdFk=%s'
+    def __get_read_by_email_query() -> str:
+        return 'SELECT * FROM UserFreeData WHERE Email=%s'
+    def __get_reassign_free_data_query() -> str:
+        return 'UPDATE UserFreeData SET UserIdFk=%s WHERE Email=%s'
     #IMPORTANT, this only returns the explicit data in the db, and does not reload, use get_free_resume data for any client facing info
     def read_free_data(userId: str) -> Dict:
         userId = str(userId) #Sanity check no uuids
@@ -19,6 +23,13 @@ class UserFreeDataTable:
             with conn.cursor(dictionary=True) as cursor:
                 query = UserFreeDataTable.__get_read_free_data_query()
                 cursor.execute(query, (userId,))
+                result = cursor.fetchone()
+        return result
+    def read_free_data_by_email(email: str) -> str:
+        with get_connection() as conn:
+            with conn.cursor(dictionary=True) as cursor:
+                query = UserFreeDataTable.__get_read_by_email_query()
+                cursor.execute(query, (email,))
                 result = cursor.fetchone()
         return result
     def update_free_data(userId: str, free_ratings_left: int, last_reload: datetime.datetime) -> int:
@@ -36,6 +47,12 @@ class UserFreeDataTable:
             with conn.cursor(dictionary=True) as cursor:
                 query = UserFreeDataTable.__get_add_free_data_query()
                 cursor.execute(query, (userId, user.email))
+                conn.commit()
+    def reassign_free_data(userId: str, email: str):
+        with get_connection() as conn:
+            with conn.cursor(dictionary=True) as cursor:
+                query = UserFreeDataTable.__get_reassign_free_data_query()
+                cursor.execute(query, (userId, email))
                 conn.commit()
     def use_free_resume_rating(userId: str):
         userId = str(userId) #Sanity check no uuids

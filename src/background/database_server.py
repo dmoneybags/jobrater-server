@@ -281,7 +281,11 @@ class DatabaseServer:
             logging.info("USER IS CHOOSING NOT TO ADD LOCATION")
 
         logging.info("ADDING FREE DATA TO DB")
-        UserFreeDataTable.add_free_data(user_id)
+        if (UserFreeDataTable.read_free_data_by_email(user.email)):
+            logging.info("USER IS BEING A SNEAKY LIL SNEAKSTER AND ALREADY HAS FREE DATA IN OUR DB")
+            UserFreeDataTable.reassign_free_data(str(user_id), user.email)
+        else:
+            UserFreeDataTable.add_free_data(user_id)
         logging.info("ADDED FREE DATA TO DB")
 
         token, expiration_date = get_token(user)
