@@ -56,10 +56,11 @@ class PaymentDecorators:
         def decorated(*args, **kwargs) -> Tuple[Response, int]:
             if PaymentDecorators.REQUIRING_PAYMENT:
                 token: str = request.headers['Authorization']
+                req_json: Dict = request.get_json()
                 user : User | None = decode_user_from_token(token)
                 user_subscription: UserSubscription = UserSubscriptionTable.read_subscription(user.user_id)
                 if not user_subscription or not user_subscription.valid():
-                    if len(ResumeTable.read_user_resumes(user.user_id)):
+                    if len(ResumeTable.read_user_resumes(user.user_id)) and not req_json["replace"]:
                         return jsonify({'message': 'Pro Subscription required'}), 402
             return f(*args, **kwargs)
         return decorated
