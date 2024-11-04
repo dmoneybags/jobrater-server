@@ -515,7 +515,7 @@ class DatabaseServer:
         if not company:
             abort(404)
         #Symbolic empty company
-        if company.overall_rating < 0.1:
+        if not company.overall_rating or company.overall_rating < 0.1:
             abort(404)
         return company.to_json()
     @app.route('/databases/add_company_with_source', methods=["POST"])

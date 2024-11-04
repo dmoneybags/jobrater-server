@@ -40,15 +40,15 @@ CONSTRAINT UserFreeData_PK PRIMARY KEY (UserIdFk)
 CREATE TABLE Company
 (
     CompanyName VARCHAR(255) NOT NULL UNIQUE,
-    BusinessOutlookRating DECIMAL(3, 2),
-    CareerOpportunitiesRating DECIMAL(2, 1),
-    CeoRating DECIMAL(3, 2),
-    CompensationAndBenefitsRating DECIMAL(2, 1),
-    CultureAndValuesRating DECIMAL(2, 1),
-    DiversityAndInclusionRating DECIMAL(2, 1),
-    SeniorManagementRating DECIMAL(2, 1),
-    WorkLifeBalanceRating DECIMAL(2, 1),
-    OverallRating DECIMAL(2, 1),
+    BusinessOutlookRating DECIMAL(3, 2) default 0,
+    CareerOpportunitiesRating DECIMAL(2, 1) default 0,
+    CeoRating DECIMAL(3, 2) default 0,
+    CompensationAndBenefitsRating DECIMAL(2, 1) default 0,
+    CultureAndValuesRating DECIMAL(2, 1) default 0,
+    DiversityAndInclusionRating DECIMAL(2, 1) default 0,
+    SeniorManagementRating DECIMAL(2, 1) default 0,
+    WorkLifeBalanceRating DECIMAL(2, 1) default 0,
+    OverallRating DECIMAL(2, 1) default 0,
     -- timestamp added to keep our data current, if data is older than lets say a month
     -- we regrab it
     TimeAdded timestamp default current_timestamp not null,
