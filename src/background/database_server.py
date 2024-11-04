@@ -489,8 +489,7 @@ class DatabaseServer:
     #
     #
     ##########################################################################################
-    #We only give the server an option to read companies,
-    #theres no reason for us to make calls to update or delete companies yet
+    #Used for the client to read the company or add the company data
     '''
     read_company_by_name
 
@@ -502,7 +501,6 @@ class DatabaseServer:
     returns
         company json
     '''
-    #Unused as of now
     @app.route('/databases/read_company', methods=["GET"])
     @token_required
     def read_company_by_name():
@@ -519,6 +517,31 @@ class DatabaseServer:
         #Symbolic empty company
         if company.overall_rating < 0.1:
             abort(404)
+        return company.to_json()
+    @app.route('/databases/add_company_with_source', methods=["POST"])
+    @token_required
+    def add_company_with_source():
+        try:
+            company_source : str = request.get_json()['companySource']
+            company_data_url : str = request.get_json()['companyDataUrl']
+        except:
+            logging.error("Request of: " + request + " is invalid")
+            #Invalid request
+            abort(403)
+        company_dict: Dict = glassdoor_scraper.get_company_from_page_source(company_source, company_data_url)
+        company: Company = Company.create_with_json(company_dict)
+        logging.info("Recieved message to add company: " + company)
+        if not company:
+            abort(404)
+        reread_company = CompanyTable.read_company_by_id(company.company_name)
+        if not reread_company:
+            CompanyTable.add_company(company)
+            logging.info("COMPANY SUCCESSFULLY ADDED")
+        else:
+            logging.info("COMPANY ALREADY IN DB")
+            if reread_company.isEmpty() and not company.isEmpty():
+                CompanyTable.update_company(company)
+                logging.info("COMPANY DETAILS UPDATED IN DB")
         return company.to_json()
     #
     #
