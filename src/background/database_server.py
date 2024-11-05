@@ -522,6 +522,7 @@ class DatabaseServer:
     @token_required
     def add_company_with_source():
         try:
+            company_name : str = request.get_json()['companyName']
             company_source : str = request.get_json()['companySource']
             company_data_url : str = request.get_json()['companyDataUrl']
         except:
@@ -529,6 +530,7 @@ class DatabaseServer:
             #Invalid request
             abort(403)
         company_dict: Dict = glassdoor_scraper.get_company_from_page_source(company_source, company_data_url)
+        company_dict["companyName"] = company_name
         company: Company = Company.create_with_json(company_dict)
         logging.info("Recieved message to add company: " + company)
         if not company:
