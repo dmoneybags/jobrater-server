@@ -136,7 +136,6 @@ class UserJobTable:
                     cursor.execute(query, (user_job_id, user_id, job_id))
                 except IntegrityError as e:
                     logging.error("USER JOB ALREADY IN DB")
-                    raise e
                 logging.info("USER JOB SUCCESSFULLY ADDED")
                 conn.commit()
                 read_query = UserJobTable.__get_read_specific_user_job_query_full_join()

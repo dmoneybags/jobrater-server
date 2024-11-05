@@ -606,6 +606,7 @@ class DatabaseServer:
         if (job_id == "NO JOB ID LOADED"):
             logging.info("Couldn't find job")
             abort(400)
+        
         addedJob: Job = UserJobTable.add_user_job(user.user_id, job_id)
         logging.info(f"=============== END ADD USER JOB TOOK {time.time() - st} seconds=================")
         return json.dumps(addedJob.to_json())
