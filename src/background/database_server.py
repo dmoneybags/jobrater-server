@@ -532,7 +532,7 @@ class DatabaseServer:
         company_dict: Dict = glassdoor_scraper.get_company_from_page_source(company_source, company_data_url)
         company_dict["companyName"] = company_name
         company: Company = Company.create_with_json(company_dict)
-        logging.info("Recieved message to add company: " + company)
+        logging.info("Recieved message to add company: " + company.company_name)
         if not company:
             abort(404)
         reread_company = CompanyTable.read_company_by_id(company.company_name)
