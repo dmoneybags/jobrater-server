@@ -6,7 +6,7 @@ class Subscription:
     PRO_SUBSCRIPTION_DISCOUNTED_PRICE = 699
     PRO_SUBSCRIPTION_BASE_PRICE_TEST_ID = "price_1QBsnwKfLZqN2X3WBnykVH85"
     PRO_SUBSCRIPTION_DISCOUNTED_PRICE_TEST_ID = "price_1QDXyVKfLZqN2X3WScUNYTel"
-    PRO_SUBSCRIPTION_DISCOUNTED_PRICE_ID = "" if os.environ["STRIPE_ENVIRONMENT"] == "production" else PRO_SUBSCRIPTION_DISCOUNTED_PRICE_TEST_ID
+    PRO_SUBSCRIPTION_DISCOUNTED_PRICE_ID = "price_1QIJFRKfLZqN2X3WLHGQwbdc" if os.environ["STRIPE_ENVIRONMENT"] == "production" else PRO_SUBSCRIPTION_DISCOUNTED_PRICE_TEST_ID
     PRO_SUBSCRIPTION_BASE_PRICE_ID = "price_1QBmFMKfLZqN2X3WL0H7dHm4" if os.environ["STRIPE_ENVIRONMENT"] == "production" else PRO_SUBSCRIPTION_BASE_PRICE_TEST_ID
     PRO_SUBCRIPTION_TEST_ID = "prod_R40ppWMFQ1pXtu"
     PRO_SUBSCRIPTION_ID = "prod_R3u3Q6oY9Z7PsZ" if os.environ["STRIPE_ENVIRONMENT"] == "production" else PRO_SUBCRIPTION_TEST_ID
@@ -19,7 +19,7 @@ class Subscription:
         if subscription_type == "pro":
             self.price = price or Subscription.PRO_SUBSCRIPTION_PRICE
             self.product_id = Subscription.PRO_SUBSCRIPTION_ID
-            self.price_id = Subscription.PRO_SUBSCRIPTION_DISCOUNTED_PRICE_TEST_ID if price == Subscription.PRO_SUBSCRIPTION_DISCOUNTED_PRICE else Subscription.PRO_SUBSCRIPTION_BASE_PRICE_ID
+            self.price_id = Subscription.PRO_SUBSCRIPTION_DISCOUNTED_PRICE_ID if price == Subscription.PRO_SUBSCRIPTION_DISCOUNTED_PRICE else Subscription.PRO_SUBSCRIPTION_BASE_PRICE_ID
         else:
             raise ValueError(f"Invalid subscription_type: {subscription_type}.")
     def to_json(self):

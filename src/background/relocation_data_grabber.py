@@ -82,35 +82,45 @@ class RelocationDataGrabber:
                 if response_json["status"] == 1:
                     return response_json
                 return None
-
+    
     async def get_fmr(location: Location):
         fips_code = await RelocationDataGrabber.get_fips_code(location)
         if not fips_code:
-            logging.error("Failed to find a valid FIPS code, returning none")
+            logging.error("Failed to find a valid FIPS code, returning None")
             return None
+    
         logging.info("Grabbing rent...")
         headers = {
             "Authorization": f"Bearer {HUD_KEY}"
         }
         url = f'https://www.huduser.gov/hudapi/public/fmr/data/{fips_code}99999'
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                response_json = await response.json()
-                logging.debug(json.dumps(response_json, indent=2))
-                try:
-                    candidate = response_json["data"]["basicdata"]
+    
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers) as response:
+                    if response.status != 200:
+                        logging.error(f"Request failed with status code {response.status}")
+                        return None
+                    try:
+                        response_json = await response.json()
+                        logging.debug(json.dumps(response_json, indent=2))
+                    except aiohttp.ContentTypeError:
+                        logging.error("Response is not in JSON format")
+                        return None
+
+                    candidate = response_json.get("data", {}).get("basicdata")
                     if isinstance(candidate, list):
                         for subcandidate in candidate:
-                            if subcandidate["zip_code"] == location.zip_code:
-                                return subcandidate["One-Bedroom"]
-                        #Force return if no match is found
-                        return candidate[0]["One-Bedroom"]
-                    rent = candidate["One-Bedroom"]
+                            if subcandidate.get("zip_code") == location.zip_code:
+                                return subcandidate.get("One-Bedroom")
+                        return candidate[0].get("One-Bedroom") if candidate else None
+                
+                    rent = candidate.get("One-Bedroom")
                     logging.info(f"Got one-bedroom rent of {rent}")
                     return rent
-                except KeyError:
-                    logging.info("Failed to grab rent")
-                    return None
+        except Exception as e:
+            logging.error(f"An error occurred while fetching FMR data: {e}")
+            return None
 
     async def get_household_income(location: Location):
         logging.info("Grabbing Household income...")

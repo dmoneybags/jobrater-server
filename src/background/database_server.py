@@ -99,7 +99,7 @@ CANSCRAPEGLASSDOOR: bool = True
 MAPBOXKEY: str = os.environ["MAPBOX_KEY"]
 API_KEY : str = os.environ["GOOGLE_API_KEY"]
 STRIPE_TEST_API_KEY : str = os.environ["STRIPE_TEST_KEY_PRIVATE"]
-
+STRIPE_API_KEY : str = os.environ["STRIPE_KEY_PRIVATE"]
 #using get to not cause keyErrors on local machine
 STRIPE_FULFILL_ORDER_KEY : str = os.environ["STRIPE_FULFILL_ORDER_KEY"] if os.environ["STRIPE_ENVIRONMENT"] == "production" else os.environ.get("STRIPE_FULFILL_ORDER_KEY_TEST")
 STRIPE_RENEW_ORDER_KEY : str = os.environ["STRIPE_RENEW_ORDER_KEY"] if os.environ["STRIPE_ENVIRONMENT"] == "production" else os.environ.get("STRIPE_RENEW_ORDER_KEY_TEST")
@@ -110,7 +110,7 @@ if os.environ["SERVER_ENVIRONMENT"] == "development":
     STRIPE_RENEW_ORDER_KEY = os.environ["STRIPE_LOCAL_WEBHOOK"]
     STRIPE_CANCEL_ORDER_KEY = os.environ["STRIPE_LOCAL_WEBHOOK"]
 
-stripe.api_key = STRIPE_TEST_API_KEY
+stripe.api_key = STRIPE_API_KEY if os.environ["STRIPE_ENVIRONMENT"] == "production" else STRIPE_TEST_API_KEY
 
 ADDUSERJOBBYDEFAULT = False
 

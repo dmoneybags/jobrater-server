@@ -51,6 +51,9 @@ class DatabaseFunctions:
     IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
     logging.info("VALUE FOR ISPRODUCTION:")
     logging.info(IS_PRODUCTION)
+    TESTING_STRIPE = os.getenv("STRIPE_ENVIRONMENT")
+    logging.info("VALUE FOR STRIPE_ENVIRONMENT:")
+    logging.info(TESTING_STRIPE)
     # Set database parameters based on the environment
     if IS_PRODUCTION:
         HOST = "13.52.58.77"
