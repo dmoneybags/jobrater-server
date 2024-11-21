@@ -36,6 +36,7 @@ class Resume:
             self.file_text = file_text
         if self.file_type == "docx":
             self.convert_docx_to_pdf()
+            self.file_type = "pdf"
         result = parser.from_buffer(self.file_content)
         self.file_text = result["content"]
         self.upload_date = upload_date
