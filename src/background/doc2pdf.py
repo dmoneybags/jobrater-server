@@ -19,7 +19,7 @@ def libreoffice_exec():
     # TODO: Provide support for more platforms
     if sys.platform == 'darwin':
         return '/Applications/LibreOffice.app/Contents/MacOS/soffice'
-    return 'libreoffice'
+    return 'libreoffice24.8'
 
 
 class LibreOfficeError(Exception):
