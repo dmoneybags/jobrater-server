@@ -4,11 +4,11 @@ from typing import Dict
 from mysql.connector.types import RowItemType
 import zlib
 from tika import parser
-from docx2pdf import convert
 import uuid
 import os
 import json
 import logging
+import doc2pdf
 
 class Resume:
     '''
@@ -48,7 +48,6 @@ class Resume:
         temp_dir = os.path.join(os.getcwd(), "src", "background", "temp")
         os.makedirs(temp_dir, exist_ok=True)
         temp_docx_path = os.path.join(temp_dir, f"resume_{unique_id}.docx")
-        temp_pdf_path = os.path.join(temp_dir, f"resume_{unique_id}.pdf")
 
         try:
             # Write the DOCX bytes to the temp DOCX file
@@ -56,7 +55,7 @@ class Resume:
                 f.write(self.file_content)
 
             # Convert the DOCX to PDF using docx2pdf
-            convert(temp_docx_path, temp_pdf_path)
+            temp_pdf_path = doc2pdf.convert_to(temp_dir, temp_docx_path)
 
             # Read the PDF file into bytes and assign it to self.file_content
             with open(temp_pdf_path, "rb") as f:
