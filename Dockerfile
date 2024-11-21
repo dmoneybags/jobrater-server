@@ -8,19 +8,6 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y wget bzip2 libaugeas0 libxtst6 libgtk-3-0 libx11-xcb-dev libdbus-glib-1-2 libxt6 libpci-dev && rm -rf /var/lib/apt/lists/*
 
-RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.35.0/geckodriver-v0.35.0-linux64.tar.gz && \
-    tar -xvzf geckodriver-v0.35.0-linux64.tar.gz && \
-    rm geckodriver-v0.35.0-linux64.tar.gz
-ENV PATH=/geckodriver:$PATH
-
-#Create a directory to store APT repository keys if it doesn't exist:
-#Get the signing key
-RUN install -d -m 0755 /etc/apt/keyrings && \
-    wget -q https://packages.mozilla.org/apt/repo-signing-key.gpg -O /etc/apt/keyrings/packages.mozilla.org.asc && \
-    echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" > /etc/apt/sources.list.d/mozilla.list && \
-    apt-get update && apt-get install -y --no-install-recommends firefox && \
-    rm -rf /var/lib/apt/lists/*
-
 # Update package list and create the directory for JDK
 RUN wget https://download.oracle.com/java/17/archive/jdk-17.0.12_linux-x64_bin.tar.gz && \
     tar -xvzf jdk-17.0.12_linux-x64_bin.tar.gz && \

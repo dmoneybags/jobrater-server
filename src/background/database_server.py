@@ -26,7 +26,7 @@ import logging
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s %(levelname)s [%(threadName)s]: %(message)s',
+    format='%(asctime)s %(levelname)s %(process)d: %(message)s',
 )
 
 from flask import Flask, abort, request, Response, jsonify
@@ -337,7 +337,14 @@ class DatabaseServer:
             company_name: str = job_json["company"]["companyName"]
             add_user_job = request.args.get("addUserJob", type=bool, default=False)
             logging.info("CHECKING IF WE NEED TO SCRAPE GLASSDOOR")
-            if (not CompanyTable.read_company_by_id(company_name) and CANSCRAPEGLASSDOOR and not message["noCompanies"]):
+            shouldScrape = False
+            company : Company | None = CompanyTable.read_company_by_id(company_name)
+            if not company:
+                shouldScrape = True
+            #Symbolic empty company
+            if not company or not company.overall_rating or company.overall_rating < 0.1:
+                shouldScrape = True
+            if (shouldScrape and CANSCRAPEGLASSDOOR and not message["noCompanies"]):
                 if (not message["gdPageSource"]):
                     job_json["company"] = Company(company_name, 0, 0, 0, 0, 0, 0, 0, 0, 0, None).to_json()
                 else:
@@ -354,6 +361,8 @@ class DatabaseServer:
                                                 company_data["glassdoorUrl"])
                     job_json["company"] = company.to_json()
             else:
+                if message["noCompanies"]:
+                    logging.info("No companies found")
                 logging.info("NO NEED TO SCRAPE GLASSDOOR")
             print("\n\n")
         except json.JSONDecodeError:
