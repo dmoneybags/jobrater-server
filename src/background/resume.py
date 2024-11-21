@@ -4,8 +4,8 @@ from typing import Dict
 from mysql.connector.types import RowItemType
 import zlib
 from tika import parser
-import docx
-import io
+import uuid
+import os
 import json
 import logging
 
@@ -33,26 +33,42 @@ class Resume:
         self.isDefault = isDefault
         if file_text:
             self.file_text = file_text
-        elif self.file_type == "pdf":
-            #front end will never know the text until we process the pd
-            result = parser.from_buffer(file_content)
-            self.file_text = result["content"]
-        elif self.file_type == "docx":
-            #Asking for forgiveness
-            try:
-                mock_file_descriptor = io.BytesIO(file_content)
-                doc = docx.Document(mock_file_descriptor)
-                full_text = []
-                for para in doc.paragraphs:
-                    full_text.append(para.text)
-                self.file_text = "\n".join(full_text)
-            except TypeError:
-                doc = docx.Document(file_content)
-                full_text = []
-                for para in doc.paragraphs:
-                    full_text.append(para.text)
-                self.file_text = "\n".join(full_text)
+        if self.file_type == "docx":
+            self.convert_docx_to_pdf()
+        result = parser.from_buffer(self.file_content)
+        self.file_text = result["content"]
         self.upload_date = upload_date
+    def convert_docx_to_pdf(self) -> None:
+        """Converts the DOCX file_content to PDF and assigns it back to self.file_content."""
+        # Create a unique identifier for this file
+        unique_id = str(uuid.uuid4())
+
+        # Define the temp directory and file paths
+        temp_dir = os.path.join(os.getcwd(), "src", "background", "temp")
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_docx_path = os.path.join(temp_dir, f"resume_{unique_id}.docx")
+        temp_pdf_path = os.path.join(temp_dir, f"resume_{unique_id}.pdf")
+
+        try:
+            # Write the DOCX bytes to the temp DOCX file
+            with open(temp_docx_path, "wb") as f:
+                f.write(self.file_content)
+
+            # Convert the DOCX to PDF using docx2pdf
+            convert(temp_docx_path, temp_pdf_path)
+
+            # Read the PDF file into bytes and assign it to self.file_content
+            with open(temp_pdf_path, "rb") as f:
+                self.file_content = f.read()
+        except Exception as e:
+            logging.critical(f"FAILED TO CONVERT DOCX RESUME TO PDF: {e}")
+            raise  # Re-raise the exception for further handling if needed
+        finally:
+            # Clean up temporary files
+            if os.path.exists(temp_docx_path):
+                os.remove(temp_docx_path)
+            if os.path.exists(temp_pdf_path):
+                os.remove(temp_pdf_path)
     '''
     compress
 
