@@ -4,6 +4,7 @@ from typing import Dict
 from mysql.connector.types import RowItemType
 import zlib
 from tika import parser
+from docx2pdf import convert
 import uuid
 import os
 import json
